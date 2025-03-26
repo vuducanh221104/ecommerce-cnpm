@@ -182,30 +182,47 @@ const WishListScreen = () => {
     }
   };
 
-  const handleAddToCart = (product) => {
-    // Create a cart item from the wishlist item, with safe property access
-    const cartItem = {
-      product_id: product._id,
-      name: product.name || "Unknown Product",
-      price: product.price || { original: 0, discount: 0 },
-      thumb: product.thumb || "",
-      color:
-        product.category_id &&
-        Array.isArray(product.category_id) &&
-        product.category_id.length > 0 &&
-        product.category_id[0].name
-          ? product.category_id[0].name
-          : "Default",
-      size: "M", // Default size
-      quantity: 1,
-      slug: product.slug || "",
-    };
+  const handleAddToCart = async (product) => {
+    try {
+      // Create a cart item from the wishlist item, with safe property access
+      const cartItem = {
+        product_id: product._id,
+        name: product.name || "Unknown Product",
+        price: product.price || { original: 0, discount: 0 },
+        thumb: product.thumb || "",
+        color:
+          product.category_id &&
+          Array.isArray(product.category_id) &&
+          product.category_id.length > 0 &&
+          product.category_id[0].name
+            ? product.category_id[0].name
+            : "Default",
+        size: "M", // Default size
+        quantity: 1,
+        slug: product.slug || "",
+      };
 
-    // Add to cart
-    addToCart(cartItem);
-    toast.success("Product added to cart");
-    // Navigate to cart
-    navigate("/cart");
+      // Thêm vào giỏ hàng và đợi phản hồi
+      const response = await addToCart(cartItem);
+
+      if (response.success) {
+        toast.success("Product added to cart");
+        // Chờ một chút để đảm bảo Redux store đã được cập nhật
+        setTimeout(() => {
+          navigate("/cart");
+        }, 300);
+      } else {
+        if (response.redirectToLogin) {
+          toast.error("Please login to add items to cart");
+          navigate("/sign_in");
+        } else {
+          toast.error(response.message || "Failed to add item to cart");
+        }
+      }
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      toast.error("Failed to add item to cart");
+    }
   };
 
   // Show loading state

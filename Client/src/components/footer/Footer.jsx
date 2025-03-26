@@ -183,9 +183,12 @@ const Footer = () => {
         </div>
         <div className="footer-bottom text-center">
           <p className="text-base text-white">
-            Copyright &copy; 2023 &nbsp;
-            <Link to="/" className="text-white">
-              Achats site
+            Copyright &copy; 2025 &nbsp;
+            <Link
+              to="https://www.facebook.com/I.Am.DucAnh123"
+              className="text-white"
+            >
+              Ecommerce
             </Link>
             &nbsp;. All rights reserved.
           </p>

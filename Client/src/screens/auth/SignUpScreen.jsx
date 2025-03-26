@@ -261,7 +261,7 @@ const SignUpScreen = () => {
               <p className="flex flex-wrap account-rel-text">
                 Already have an account?
                 <Link to="/sign_in" className="font-medium">
-                  Log in
+                  Sign In
                 </Link>
               </p>
             </div>

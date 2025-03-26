@@ -10,7 +10,7 @@ import {
   selectIsSidebarOpen,
   toggleSidebar,
 } from "../../redux/slices/sidebarSlice";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { searchProductsByQuery } from "../../services/productService";
 
 const SideNavigationWrapper = styled.div`
@@ -205,6 +205,7 @@ const Sidebar = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const sidebarRef = useRef(null);
 
   // Fetch search results when searchQuery changes
   useEffect(() => {
@@ -246,6 +247,38 @@ const Sidebar = () => {
 
     return () => clearTimeout(debounceTimer);
   }, [searchQuery]);
+
+  // Đóng sidebar khi bấm Esc
+  useEffect(() => {
+    const handleEscKey = (e) => {
+      if (e.key === "Escape" && isSidebarOpen) {
+        dispatch(toggleSidebar(false));
+      }
+    };
+
+    document.addEventListener("keydown", handleEscKey);
+    return () => {
+      document.removeEventListener("keydown", handleEscKey);
+    };
+  }, [isSidebarOpen, dispatch]);
+
+  // Đóng sidebar khi bấm ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        sidebarRef.current &&
+        !sidebarRef.current.contains(e.target) &&
+        isSidebarOpen
+      ) {
+        dispatch(toggleSidebar(false));
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isSidebarOpen, dispatch]);
 
   const handleSearchChange = (e) => {
     const query = e.target.value;
@@ -300,6 +333,7 @@ const Sidebar = () => {
 
   return (
     <SideNavigationWrapper
+      ref={sidebarRef}
       className={`bg-white h-full ${isSidebarOpen ? "show" : ""}`}
     >
       <button
@@ -313,7 +347,7 @@ const Sidebar = () => {
           <div className="brand-img-wrap flex items-center justify-center">
             <img className="site-brand-img" src={staticImages.logo} />
           </div>
-          <span className="site-brand-text text-outerspace">achats.</span>
+          <span className="site-brand-text text-outerspace">Ecommerce.</span>
         </SiteBrandWrapper>
         <form
           className="sidenav-search-form sidenav-search-container"

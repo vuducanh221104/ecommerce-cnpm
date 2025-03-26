@@ -11,6 +11,7 @@ import { breakpoints, defaultTheme } from "../../styles/themes/default";
 import ProductDescriptionTab from "../../components/product/ProductDescriptionTab";
 import ProductSimilar from "../../components/product/ProductSimilar";
 import ProductServices from "../../components/product/ProductServices";
+import ModalLoading from "../../components/common/ModalLoading";
 import { getProductBySlug } from "../../services/productService";
 import { addToCart, refreshCartCount } from "../../services/cartService";
 import {
@@ -211,14 +212,6 @@ const ProductColorWrapper = styled.div`
   }
 `;
 
-const LoadingWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
-  font-size: 18px;
-`;
-
 const ErrorWrapper = styled.div`
   display: flex;
   justify-content: center;
@@ -348,11 +341,13 @@ const ProductDetailsScreen = () => {
         quantity: 1,
       };
 
-      const response = await addToCart(currentUser._id, cartItem);
+      const response = await addToCart(cartItem);
 
       if (response.success) {
         // Update Redux store with new cart
-        dispatch(updateCartSuccess(response.cart));
+        if (response.cart) {
+          dispatch(updateCartSuccess(response.cart));
+        }
 
         // Refresh cart count
         refreshCartCount();
@@ -360,7 +355,14 @@ const ProductDetailsScreen = () => {
         toast.success("Item added to cart successfully");
         navigate("/cart");
       } else {
-        toast.error(response.message || "Failed to add item to cart");
+        // Nếu cần đăng nhập, chuyển hướng đến trang đăng nhập
+        if (response.redirectToLogin) {
+          navigate("/sign_in", {
+            state: { redirect: `/product/${product.slug}` },
+          });
+        } else {
+          toast.error(response.message || "Failed to add item to cart");
+        }
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -383,17 +385,7 @@ const ProductDetailsScreen = () => {
     window.dispatchEvent(new Event("storage"));
   };
 
-  if (loading) {
-    return (
-      <DetailsScreenWrapper>
-        <Container>
-          <LoadingWrapper>Loading product details...</LoadingWrapper>
-        </Container>
-      </DetailsScreenWrapper>
-    );
-  }
-
-  if (error || !product) {
+  if (error) {
     return (
       <DetailsScreenWrapper>
         <Container>
@@ -402,6 +394,25 @@ const ProductDetailsScreen = () => {
       </DetailsScreenWrapper>
     );
   }
+
+  // If no product data yet, show a loading placeholder for breadcrumbs
+  const breadcrumbItems = !product
+    ? [
+        { label: "Home", link: "/" },
+        { label: "Loading...", link: "" },
+      ]
+    : [
+        { label: "Home", link: "/" },
+        ...(product.category_id && product.category_id.length > 0
+          ? [
+              {
+                label: product.category_id[0].name,
+                link: `/category/${product.category_id[0].slug}`,
+              },
+            ]
+          : []),
+        { label: product.name, link: "" },
+      ];
 
   // Get stock for selected size
   const getStockForSelectedSize = () => {
@@ -413,188 +424,184 @@ const ProductDetailsScreen = () => {
 
   const stockCount = getStockForSelectedSize();
 
-  // Generate breadcrumb items based on product categories
-  const breadcrumbItems = [
-    { label: "Home", link: "/" },
-    ...(product.category_id && product.category_id.length > 0
-      ? [
-          {
-            label: product.category_id[0].name,
-            link: `/category/${product.category_id[0].slug}`,
-          },
-        ]
-      : []),
-    { label: product.name, link: "" },
-  ];
-
   return (
     <DetailsScreenWrapper>
       <Container>
         <Breadcrumb items={breadcrumbItems} />
-        <DetailsContent className="grid">
-          {selectedVariant && (
-            <ProductPreview previewImages={selectedVariant.images} />
-          )}
-          <ProductDetailsWrapper>
-            <h2 className="prod-title">{product.name}</h2>
-            <div
-              className="prod-price text-xl font-bold text-outerspace "
-              style={{ marginBottom: "10px" }}
-            >
-              {product.price.discount &&
-              product.price.discount !== product.price.original ? (
-                <>
-                  <span
-                    className="text-4xl font-normal"
-                    style={{ marginRight: "10px" }}
-                  >
-                    {currencyFormat(product.price.discount)}
-                  </span>
-                  <span
-                    className="text-3xl line-through ml-2 font-normal "
-                    style={{
-                      opacity: 0.6,
-                      color: "#666",
-                      textDecoration: "line-through",
-                    }}
-                  >
-                    {currencyFormat(product.price.original)}
-                  </span>
-                </>
-              ) : (
-                <span className="text-4xl font-normal">
-                  {currencyFormat(product.price.original)}
-                </span>
+        {loading ? (
+          <ModalLoading />
+        ) : (
+          <>
+            <DetailsContent className="grid">
+              {selectedVariant && (
+                <ProductPreview previewImages={selectedVariant.images} />
               )}
-            </div>
-            <div className="flex items-center rating-and-comments flex-wrap">
-              <div className="prod-comments flex items-start">
-                <span className="prod-comment-icon text-gray">
-                  <i className="bi bi-chat-left-text"></i>
-                </span>
-                <span className="prod-comment-text text-sm text-gray">
-                  {product.comment?.length || 0} comment(s)
-                </span>
-              </div>
-            </div>
-
-            {product.material_id &&
-              Array.isArray(product.material_id) &&
-              product.material_id.length > 0 && (
-                <MaterialsWrapper>
-                  <p className="materials-title">Materials:</p>
-                  <div className="materials-list">
-                    {product.material_id.map((material) => (
+              <ProductDetailsWrapper>
+                <h2 className="prod-title">{product.name}</h2>
+                <div
+                  className="prod-price text-xl font-bold text-outerspace "
+                  style={{ marginBottom: "10px" }}
+                >
+                  {product.price.discount &&
+                  product.price.discount !== product.price.original ? (
+                    <>
                       <span
-                        key={material._id || Math.random()}
-                        className="material-item"
+                        className="text-4xl font-normal"
+                        style={{ marginRight: "10px" }}
                       >
-                        {material.name || "Unknown Material"}
+                        {currencyFormat(product.price.discount)}
                       </span>
+                      <span
+                        className="text-3xl line-through ml-2 font-normal "
+                        style={{
+                          opacity: 0.6,
+                          color: "#666",
+                          textDecoration: "line-through",
+                        }}
+                      >
+                        {currencyFormat(product.price.original)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-4xl font-normal">
+                      {currencyFormat(product.price.original)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center rating-and-comments flex-wrap">
+                  <div className="prod-comments flex items-start">
+                    <span className="prod-comment-icon text-gray">
+                      <i className="bi bi-chat-left-text"></i>
+                    </span>
+                    <span className="prod-comment-text text-sm text-gray">
+                      {product.comment?.length || 0} comment(s)
+                    </span>
+                  </div>
+                </div>
+
+                {product.material_id &&
+                  Array.isArray(product.material_id) &&
+                  product.material_id.length > 0 && (
+                    <MaterialsWrapper>
+                      <p className="materials-title">Materials:</p>
+                      <div className="materials-list">
+                        {product.material_id.map((material) => (
+                          <span
+                            key={material._id || Math.random()}
+                            className="material-item"
+                          >
+                            {material.name || "Unknown Material"}
+                          </span>
+                        ))}
+                      </div>
+                    </MaterialsWrapper>
+                  )}
+
+                <ProductColorWrapper>
+                  <div className="prod-colors-top flex items-center flex-wrap">
+                    <p className="text-lg font-semibold text-outerspace">
+                      Colors Available :
+                    </p>
+                  </div>
+                  <div className="prod-colors-list flex items-center">
+                    {product.variants.map((variant, index) => (
+                      <div
+                        className={`prod-colors-item ${
+                          selectedColor === variant.color ? "selected" : ""
+                        }`}
+                        key={index}
+                      >
+                        <input
+                          type="radio"
+                          name="colors"
+                          checked={selectedColor === variant.color}
+                          onChange={() => setSelectedColor(variant.color)}
+                        />
+                        <span
+                          className="prod-colorbox"
+                          style={{ background: variant.color }}
+                        ></span>
+                      </div>
                     ))}
                   </div>
-                </MaterialsWrapper>
-              )}
+                </ProductColorWrapper>
 
-            <ProductColorWrapper>
-              <div className="prod-colors-top flex items-center flex-wrap">
-                <p className="text-lg font-semibold text-outerspace">
-                  Colors Available :
-                </p>
-              </div>
-              <div className="prod-colors-list flex items-center">
-                {product.variants.map((variant, index) => (
-                  <div
-                    className={`prod-colors-item ${
-                      selectedColor === variant.color ? "selected" : ""
-                    }`}
-                    key={index}
-                  >
-                    <input
-                      type="radio"
-                      name="colors"
-                      checked={selectedColor === variant.color}
-                      onChange={() => setSelectedColor(variant.color)}
-                    />
-                    <span
-                      className="prod-colorbox"
-                      style={{ background: variant.color }}
-                    ></span>
+                <ProductSizeWrapper>
+                  <div className="prod-size-top flex items-center flex-wrap">
+                    <p className="text-lg font-semibold text-outerspace">
+                      Select size :
+                    </p>
+                    <Link to="/" className="text-sm text-gray font-medium">
+                      Size Guide &nbsp; <i className="bi bi-arrow-right"></i>
+                    </Link>
                   </div>
-                ))}
-              </div>
-            </ProductColorWrapper>
+                  <div className="prod-size-list flex items-center">
+                    {selectedVariant &&
+                      selectedVariant.sizes.map((sizeObj, index) => (
+                        <div
+                          className="prod-size-item"
+                          key={index}
+                          title={
+                            sizeObj.stock === 0
+                              ? "Out of stock"
+                              : `${sizeObj.stock} in stock`
+                          }
+                        >
+                          <input
+                            type="radio"
+                            name="size"
+                            checked={selectedSize === sizeObj.size}
+                            onChange={() => setSelectedSize(sizeObj.size)}
+                            disabled={sizeObj.stock === 0}
+                          />
+                          <span className="flex items-center justify-center font-medium text-outerspace text-sm">
+                            {sizeObj.size}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </ProductSizeWrapper>
 
-            <ProductSizeWrapper>
-              <div className="prod-size-top flex items-center flex-wrap">
-                <p className="text-lg font-semibold text-outerspace">
-                  Select size :
-                </p>
-                <Link to="/" className="text-sm text-gray font-medium">
-                  Size Guide &nbsp; <i className="bi bi-arrow-right"></i>
-                </Link>
-              </div>
-              <div className="prod-size-list flex items-center">
-                {selectedVariant &&
-                  selectedVariant.sizes.map((sizeObj, index) => (
-                    <div
-                      className="prod-size-item"
-                      key={index}
-                      title={
-                        sizeObj.stock === 0
-                          ? "Out of stock"
-                          : `${sizeObj.stock} in stock`
-                      }
-                    >
-                      <input
-                        type="radio"
-                        name="size"
-                        checked={selectedSize === sizeObj.size}
-                        onChange={() => setSelectedSize(sizeObj.size)}
-                        disabled={sizeObj.stock === 0}
-                      />
-                      <span className="flex items-center justify-center font-medium text-outerspace text-sm">
-                        {sizeObj.size}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </ProductSizeWrapper>
-
-            <div className="btn-and-price flex items-center flex-wrap">
-              <button
-                type="button"
-                className={`wishlist-button flex items-center gap-2 mt-4 mb-2 py-2 px-4 border rounded-md ${
-                  inWishlist
-                    ? "border-red-300 text-red-500 bg-red-50"
-                    : "border-gray-300 text-gray-600 bg-white"
-                }`}
-                onClick={handleWishlistToggle}
-              >
-                <i
-                  className={`bi ${inWishlist ? "bi-heart-fill" : "bi-heart"}`}
-                ></i>
-                <span>
-                  {inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-                </span>
-              </button>
-              <BaseLinkGreen
-                as="button"
-                onClick={handleAddToCart}
-                className="prod-add-btn"
-                disabled={!selectedSize || stockCount === 0}
-              >
-                <span className="prod-add-btn-icon">
-                  <i className="bi bi-cart2"></i>
-                </span>
-                <span className="prod-add-btn-text">Add to cart</span>
-              </BaseLinkGreen>
-            </div>
-            <ProductServices />
-          </ProductDetailsWrapper>
-        </DetailsContent>
-        <ProductDescriptionTab description={product.description} />
-        {/* <ProductSimilar /> */}
+                <div className="btn-and-price flex items-center flex-wrap">
+                  <button
+                    type="button"
+                    className={`wishlist-button flex items-center gap-2 mt-4 mb-2 py-2 px-4 border rounded-md ${
+                      inWishlist
+                        ? "border-red-300 text-red-500 bg-red-50"
+                        : "border-gray-300 text-gray-600 bg-white"
+                    }`}
+                    onClick={handleWishlistToggle}
+                  >
+                    <i
+                      className={`bi ${
+                        inWishlist ? "bi-heart-fill" : "bi-heart"
+                      }`}
+                    ></i>
+                    <span>
+                      {inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+                    </span>
+                  </button>
+                  <BaseLinkGreen
+                    as="button"
+                    onClick={handleAddToCart}
+                    className="prod-add-btn"
+                    disabled={!selectedSize || stockCount === 0}
+                  >
+                    <span className="prod-add-btn-icon">
+                      <i className="bi bi-cart2"></i>
+                    </span>
+                    <span className="prod-add-btn-text">Add to cart</span>
+                  </BaseLinkGreen>
+                </div>
+                <ProductServices />
+              </ProductDetailsWrapper>
+            </DetailsContent>
+            <ProductDescriptionTab
+              description={product.description}
+              productId={product._id}
+            />
+          </>
+        )}
       </Container>
     </DetailsScreenWrapper>
   );

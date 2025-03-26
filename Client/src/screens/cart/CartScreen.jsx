@@ -17,6 +17,8 @@ import CartEmptyScreen from "./CartEmptyScreen";
 import { toast } from "react-hot-toast";
 import { updateCartSuccess } from "../../redux/slices/userSlice";
 import { BaseButtonOuterspace } from "../../styles/button";
+import { checkAuthState } from "../../services/authService";
+import { store } from "../../redux/store";
 
 const CartPageWrapper = styled.main`
   padding: 48px 0;
@@ -68,34 +70,50 @@ const ActionButtons = styled.div`
 const CartScreen = () => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { currentUser } = useSelector((state) => state.user);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   useEffect(() => {
-    if (!currentUser) {
-      toast.error("Please login to view your cart");
-      navigate("/sign_in");
-      return;
-    }
+    const initializeCart = async () => {
+      setLoading(true);
+      setError(null);
 
-    loadCartItems();
-  }, [currentUser, navigate]);
+      // Nếu chưa có user, thử kiểm tra lại trạng thái xác thực
+      if (!currentUser) {
+        await checkAuthState();
+      }
+
+      // Kiểm tra lại sau khi đã thử xác thực
+      const user = store.getState().user.currentUser;
+
+      if (!user) {
+        toast.error("Please login to view your cart");
+        navigate("/sign_in");
+        setLoading(false);
+        return;
+      }
+
+      loadCartItems();
+    };
+
+    initializeCart();
+  }, []);
 
   const loadCartItems = async () => {
     try {
-      if (!currentUser) return;
+      const response = await getUserCart(currentUser?._id);
 
-      const response = await getUserCart(currentUser._id);
       if (response.success) {
-        setCartItems(response.cart);
-        dispatch(updateCartSuccess(response.cart));
-        refreshCartCount();
+        setCartItems(response.cart || []);
       } else {
+        setError("Failed to load cart items");
         toast.error("Failed to load cart items");
       }
     } catch (error) {
       console.error("Error loading cart:", error);
+      setError("Failed to load cart items");
       toast.error("Failed to load cart items");
     } finally {
       setLoading(false);
@@ -110,9 +128,10 @@ const CartScreen = () => {
 
   const handleClearCart = async () => {
     try {
-      if (!currentUser) return;
+      const user = store.getState().user.currentUser;
+      if (!user) return;
 
-      const response = await clearCart(currentUser._id);
+      const response = await clearCart(user._id);
       if (response.success) {
         // Update local state and Redux
         setCartItems([]);
@@ -160,18 +179,13 @@ const CartScreen = () => {
             Please fill in the fields below and click place order to complete
             your purchase!
           </p>
-          <ActionButtons>
-            <BaseButtonOuterspace onClick={handleClearCart}>
-              Clear Cart
-            </BaseButtonOuterspace>
-          </ActionButtons>
         </div>
         <CartContent className="grid items-start">
           <div className="cart-content-left">
             <CartTable cartItems={cartItems} onCartUpdate={handleCartUpdate} />
           </div>
           <div className="grid cart-content-right">
-            <CartDiscount />
+            <CartDiscount onClearCart={handleClearCart} />
             <CartSummary cartItems={cartItems} />
           </div>
         </CartContent>

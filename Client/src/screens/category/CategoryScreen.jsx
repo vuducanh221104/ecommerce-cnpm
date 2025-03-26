@@ -6,6 +6,7 @@ import Breadcrumb from "../../components/common/Breadcrumb";
 import CategoryGrid from "../../components/category/CategoryGrid";
 import Filter from "../../components/category/Filter";
 import MobileFilter from "../../components/category/MobileFilter";
+import ModalLoading from "../../components/common/ModalLoading";
 import {
   getProductsByCategory,
   getAllProducts,
@@ -83,6 +84,8 @@ const CategoryScreen = () => {
     minPrice: "",
     maxPrice: "",
     sortBy: "date-desc",
+    categories: [],
+    materials: [],
   });
 
   useEffect(() => {
@@ -142,6 +145,30 @@ const CategoryScreen = () => {
       );
     }
 
+    // Apply category filters if any
+    if (filters.categories && filters.categories.length > 0) {
+      filtered = filtered.filter((product) => {
+        // Extract all category IDs from the product
+        const productCategoryIds = product.category_id.map((cat) =>
+          typeof cat === "object" ? cat._id : cat
+        );
+        // Check if any of the product's category IDs are in the selected categories
+        return filters.categories.some((id) => productCategoryIds.includes(id));
+      });
+    }
+
+    // Apply material filters if any
+    if (filters.materials && filters.materials.length > 0) {
+      filtered = filtered.filter((product) => {
+        // Extract all material IDs from the product
+        const productMaterialIds = product.material_id.map((mat) =>
+          typeof mat === "object" ? mat._id : mat
+        );
+        // Check if any of the product's material IDs are in the selected materials
+        return filters.materials.some((id) => productMaterialIds.includes(id));
+      });
+    }
+
     // Apply sorting
     switch (filters.sortBy) {
       case "price-asc":
@@ -177,21 +204,32 @@ const CategoryScreen = () => {
     setFilters(newFilters);
   };
 
-  if (loading) {
-    return (
-      <CategoryScreenWrapper>
-        <Container>
-          <LoadingWrapper>Loading products...</LoadingWrapper>
-        </Container>
-      </CategoryScreenWrapper>
-    );
-  }
-
   if (error || !category) {
     return (
       <CategoryScreenWrapper>
         <Container>
-          <ErrorWrapper>{error || "Category not found"}</ErrorWrapper>
+          <CategoryHeader>
+            <h1>Shop</h1>
+            <p>
+              {loading
+                ? "Loading products..."
+                : `${filteredProducts.length} products found`}
+            </p>
+          </CategoryHeader>
+          <CategoryContent>
+            <DesktopFilter>
+              <Filter onFilterChange={handleFilterChange} filters={filters} />
+            </DesktopFilter>
+            <div>
+              <MobileFilterWrapper>
+                <MobileFilter
+                  onFilterChange={handleFilterChange}
+                  filters={filters}
+                />
+              </MobileFilterWrapper>
+              <ModalLoading />
+            </div>
+          </CategoryContent>
         </Container>
       </CategoryScreenWrapper>
     );
@@ -208,7 +246,11 @@ const CategoryScreen = () => {
         <Breadcrumb items={breadcrumbItems} />
         <CategoryHeader>
           <h1>{category.name}</h1>
-          <p>{filteredProducts.length} products found</p>
+          <p>
+            {loading
+              ? "Loading products..."
+              : `${filteredProducts.length} products found`}
+          </p>
         </CategoryHeader>
         <CategoryContent>
           <DesktopFilter>
@@ -221,7 +263,11 @@ const CategoryScreen = () => {
                 filters={filters}
               />
             </MobileFilterWrapper>
-            <CategoryGrid products={filteredProducts} />
+            {loading ? (
+              <ModalLoading />
+            ) : (
+              <CategoryGrid products={filteredProducts} />
+            )}
           </div>
         </CategoryContent>
       </Container>

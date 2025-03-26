@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
 import Home from "./screens/home/HomeScreen";
 // layouts
 import BaseLayout from "./components/layout/BaseLayout";
@@ -26,15 +27,31 @@ import Account from "./screens/user/AccountScreen";
 import Address from "./screens/user/AddressScreen";
 import CategoryScreen from "./screens/category/CategoryScreen";
 import SearchScreen from "./screens/search/SearchScreen";
+import AdminRoutes from "./screens/admin/AdminRoutes";
 import { Toaster } from "react-hot-toast";
+import { checkAuthState } from "./services/authService";
 
 function App() {
+  useEffect(() => {
+    // Kiểm tra trạng thái đăng nhập khi ứng dụng khởi động
+    (async () => {
+      try {
+        await checkAuthState();
+      } catch (error) {
+        console.error("Error checking auth state:", error);
+      }
+    })();
+  }, []);
+
   return (
     <>
       <Router>
         <GlobalStyles />
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Routes>
+          {/* Admin routes */}
+          <Route path="/admin/*" element={<AdminRoutes />} />
+
           {/* main screens */}
           <Route path="/" element={<BaseLayout />}>
             <Route index element={<Home />} />
@@ -44,12 +61,16 @@ function App() {
             <Route path="/empty_cart" element={<CartEmpty />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/order" element={<Order />} />
-            <Route path="/order_detail" element={<OrderDetail />} />
+            <Route path="/order_detail/:orderId" element={<OrderDetail />} />
             <Route path="/wishlist" element={<WishList />} />
             <Route path="/empty_wishlist" element={<WishListEmpty />} />
             <Route path="/confirm" element={<Confirm />} />
             <Route path="/account" element={<Account />} />
             <Route path="/account/add" element={<Address />} />
+            <Route
+              path="/account/edit-address/:addressId"
+              element={<Address />}
+            />
             <Route
               path="/category/:categorySlug"
               element={<CategoryScreen />}

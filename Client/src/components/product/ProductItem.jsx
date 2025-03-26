@@ -1,5 +1,5 @@
 import { PropTypes } from "prop-types";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { commonCardStyles } from "../../styles/card";
 import { breakpoints, defaultTheme } from "../../styles/themes/default";
@@ -10,6 +10,8 @@ import {
   addToWishlist,
   removeFromWishlist,
 } from "../../services/wishlistService";
+import { store } from "../../redux/store";
+import { toast } from "react-hot-toast";
 
 const ProductCardWrapper = styled(Link)`
   ${commonCardStyles}
@@ -75,6 +77,7 @@ const ProductCardWrapper = styled(Link)`
 
 const ProductItem = ({ product }) => {
   const [inWishlist, setInWishlist] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check if product is in wishlist on component mount
@@ -84,6 +87,19 @@ const ProductItem = ({ product }) => {
   const handleWishlistClick = (e) => {
     e.preventDefault(); // Prevent navigation to product details
     e.stopPropagation(); // Prevent event bubbling
+
+    // Check if user is logged in
+    const currentUser = store.getState().user.currentUser;
+
+    if (!currentUser) {
+      // User is not logged in, redirect to login page with return URL
+      toast.error("Please login to add items to your wishlist");
+
+      // Get current path to return after login
+      const returnUrl = window.location.pathname;
+      navigate(`/sign_in?returnUrl=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
 
     if (inWishlist) {
       removeFromWishlist(product._id);

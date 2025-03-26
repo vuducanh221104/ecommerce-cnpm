@@ -58,6 +58,17 @@ const CartTableWrapper = styled.table`
 `;
 
 const CartTable = ({ cartItems, onCartUpdate }) => {
+  // Filter out any potentially invalid cart items to prevent errors
+  const validCartItems = cartItems.filter(
+    (item) =>
+      item &&
+      item.product_id &&
+      item.name &&
+      item.price &&
+      typeof item.price === "object" &&
+      item.price.original
+  );
+
   const CART_TABLE_HEADS = [
     "Product details",
     "Price",
@@ -85,10 +96,10 @@ const CartTable = ({ cartItems, onCartUpdate }) => {
           </tr>
         </thead>
         <tbody>
-          {cartItems.map((cartItem) => (
+          {validCartItems.map((item) => (
             <CartItem
-              key={`${cartItem.product_id}-${cartItem.color}-${cartItem.size}`}
-              cartItem={cartItem}
+              key={`${item.product_id}-${item.color}-${item.size}`}
+              cartItem={item}
               onCartUpdate={onCartUpdate}
             />
           ))}

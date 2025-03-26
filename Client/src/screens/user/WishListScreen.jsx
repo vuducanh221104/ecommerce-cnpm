@@ -18,6 +18,8 @@ import { Link, useNavigate } from "react-router-dom";
 import WishListEmptyScreen from "./WishListEmptyScreen";
 import { addToCart } from "../../services/cartService";
 import { toast } from "react-hot-toast";
+import { checkAuthState } from "../../services/authService";
+import { store } from "../../redux/store";
 
 const WishListScreenWrapper = styled.main`
   .wishlist {
@@ -164,23 +166,33 @@ const breadcrumbItems = [
 
 const WishListScreen = () => {
   const wishlist = useSelector((state) => state.wishlist || { items: [] });
+  const { currentUser } = useSelector((state) => state.user);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   // Load wishlist items on component mount
   useEffect(() => {
-    const loadWishlist = async () => {
+    const initializeWishlist = async () => {
+      setLoading(true);
+
+      // Nếu chưa có user, thử kiểm tra lại trạng thái xác thực
+      if (!currentUser) {
+        await checkAuthState();
+      }
+
       try {
-        // This will update Redux store with items from API if logged in
+        // Lấy wishlist từ localStorage hoặc API (nếu đã đăng nhập)
         await getWishlistItems();
       } catch (error) {
         console.error("Error loading wishlist:", error);
+        toast.error("Failed to load wishlist items");
       } finally {
         setLoading(false);
       }
     };
 
-    loadWishlist();
+    initializeWishlist();
   }, []);
 
   const handleRemoveFromWishlist = async (productId) => {
@@ -202,30 +214,47 @@ const WishListScreen = () => {
     }
   };
 
-  const handleAddToCart = (product) => {
-    // Create a cart item from the wishlist item, with safe property access
-    const cartItem = {
-      product_id: product._id,
-      name: product.name || "Unknown Product",
-      price: product.price || { original: 0, discount: 0 },
-      thumb: product.thumb || "",
-      color:
-        product.category_id &&
-        Array.isArray(product.category_id) &&
-        product.category_id.length > 0 &&
-        product.category_id[0].name
-          ? product.category_id[0].name
-          : "Default",
-      size: "M", // Default size
-      quantity: 1,
-      slug: product.slug || "",
-    };
+  const handleAddToCart = async (product) => {
+    try {
+      // Create a cart item from the wishlist item, with safe property access
+      const cartItem = {
+        product_id: product._id,
+        name: product.name || "Unknown Product",
+        price: product.price || { original: 0, discount: 0 },
+        thumb: product.thumb || "",
+        color:
+          product.category_id &&
+          Array.isArray(product.category_id) &&
+          product.category_id.length > 0 &&
+          product.category_id[0].name
+            ? product.category_id[0].name
+            : "Default",
+        size: "M", // Default size
+        quantity: 1,
+        slug: product.slug || "",
+      };
 
-    // Add to cart
-    addToCart(cartItem);
-    toast.success("Product added to cart");
-    // Navigate to cart
-    navigate("/cart");
+      // Thêm vào giỏ hàng và đợi phản hồi
+      const response = await addToCart(cartItem);
+
+      if (response.success) {
+        toast.success("Product added to cart");
+        // Chờ một chút để đảm bảo Redux store đã được cập nhật
+        setTimeout(() => {
+          navigate("/cart");
+        }, 300);
+      } else {
+        if (response.redirectToLogin) {
+          toast.error("Please login to add items to cart");
+          navigate("/sign_in");
+        } else {
+          toast.error(response.message || "Failed to add item to cart");
+        }
+      }
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      toast.error("Failed to add item to cart");
+    }
   };
 
   const handleClearWishlist = async () => {
@@ -350,6 +379,7 @@ const WishListScreen = () => {
                       </span>
                       <button
                         className="wish-cart-btn bg-black text-white py-2 px-4 rounded hover:bg-gray-800 transition-colors"
+                        style={{ padding: "17px" }}
                         onClick={() => handleAddToCart(item)}
                       >
                         Add to cart

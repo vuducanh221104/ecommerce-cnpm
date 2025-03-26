@@ -1,4 +1,4 @@
-// Wishlist service to manage favorite products using Redux store and database
+// Wishlist service to manage favorite products in localStorage and database
 import * as httpRequest from "../config/httpsRequest";
 import { store } from "../redux/store";
 import {
@@ -8,6 +8,8 @@ import {
   setWishlistItems,
 } from "../redux/slices/wishlistSlice";
 import { updateUserSuccess } from "../redux/slices/userSlice";
+
+const WISHLIST_KEY = "ducanh_wishlist";
 
 // Helper to get current user from Redux
 const getCurrentUser = () => {
@@ -36,17 +38,19 @@ export const getWishlistItems = async () => {
             "Error fetching wishlist from API:",
             response.data.message
           );
-          return [];
         }
       } catch (error) {
         console.error("API error getting wishlist:", error);
-        return [];
       }
     }
 
-    // For non-logged-in users, get from Redux store
-    const state = store.getState();
-    return state.wishlist.items || [];
+    // Fallback to localStorage or if user is not logged in
+    const wishlistItems = localStorage.getItem(WISHLIST_KEY);
+    const items = wishlistItems ? JSON.parse(wishlistItems) : [];
+
+    // Update Redux store with items from localStorage
+    store.dispatch(setWishlistItems(items));
+    return items;
   } catch (error) {
     console.error("Error getting wishlist:", error);
     return [];
@@ -56,6 +60,7 @@ export const getWishlistItems = async () => {
 // Refresh wishlist count - this can be called after operations
 // that might affect the wishlist count
 export const refreshWishlistCount = async () => {
+  await getWishlistItems();
   // Trigger a DOM event that can be listened to
   window.dispatchEvent(new Event("wishlistUpdated"));
 };
@@ -75,6 +80,8 @@ export const addToWishlist = async (product) => {
       slug: product.slug || "",
       thumb: product.thumb || "",
       price: product.price || { original: 0, discount: 0 },
+      // Store product color information if available
+      color: product.color || "Gray",
       // Better handling of category information
       category_id: product.category_id || [],
       // Enhanced category_name handling
@@ -107,12 +114,7 @@ export const addToWishlist = async (product) => {
 
         if (response.data.success) {
           // Update Redux store (both wishlist and user state)
-          store.dispatch(
-            addToWishlistSuccess({
-              ...newItem,
-              _id: product._id, // Ensure we have the _id for easier comparison
-            })
-          );
+          store.dispatch(addToWishlistSuccess(newItem));
 
           // Update user's wishlist in Redux if it was returned in the response
           if (response.data.wishlist) {
@@ -133,13 +135,13 @@ export const addToWishlist = async (product) => {
         }
       } catch (error) {
         console.error("API error adding to wishlist:", error);
-        return { success: false, message: "Failed to add product to wishlist" };
       }
     }
 
-    // For non-logged in users, just update Redux store
-    const state = store.getState();
-    const items = state.wishlist.items || [];
+    // For non-logged in users or if API call fails, use localStorage
+    // Get current wishlist items
+    const wishlistItems = localStorage.getItem(WISHLIST_KEY);
+    const items = wishlistItems ? JSON.parse(wishlistItems) : [];
 
     // Check if the product is already in the wishlist
     const existingItemIndex = items.findIndex(
@@ -147,11 +149,17 @@ export const addToWishlist = async (product) => {
     );
 
     if (existingItemIndex === -1) {
-      // Add _id field for item comparison
+      // Need to ensure the item has _id for localStorage comparison
       const localItem = {
         ...newItem,
-        _id: product._id,
+        _id: product._id, // Add _id field for localStorage items
       };
+
+      // Create a new array with the new item (avoid modifying existing array)
+      const updatedWishlist = [...items, localItem];
+
+      // Save to localStorage
+      localStorage.setItem(WISHLIST_KEY, JSON.stringify(updatedWishlist));
 
       // Update Redux store
       store.dispatch(addToWishlistSuccess(localItem));
@@ -230,26 +238,47 @@ export const removeFromWishlist = async (productId) => {
         }
       } catch (error) {
         console.error("API error removing from wishlist:", error);
-        return {
-          success: false,
-          message: "Failed to remove product from wishlist",
-        };
       }
     }
 
-    // For non-logged in users, just update Redux store
+    // For non-logged in users or if API call fails, use localStorage
+    let wishlistItems = localStorage.getItem(WISHLIST_KEY);
+    const items = wishlistItems ? JSON.parse(wishlistItems) : [];
+    const initialLength = items.length;
+
+    console.log("Checking localStorage wishlist items:", items.length);
+
     // Determine which ID field to check against
     const localStorageProductId =
       typeof productId === "object" && productId !== null
         ? productId.product_id || productId._id
         : productId;
 
-    // Update Redux store
-    store.dispatch(removeFromWishlistSuccess(localStorageProductId));
+    console.log("Using localStorage product ID:", localStorageProductId);
 
-    // Refresh wishlist count
-    await refreshWishlistCount();
-    return { success: true, message: "Product removed from wishlist" };
+    // Create a new filtered array instead of modifying the original
+    const updatedWishlist = items.filter((item) => {
+      // For localStorage items, check both _id and product_id if available
+      const itemProductId = item.product_id || item._id;
+      const match = String(itemProductId) !== String(localStorageProductId);
+      console.log(
+        `Comparing localStorage: ${itemProductId} vs ${localStorageProductId}, keeping: ${match}`
+      );
+      return match;
+    });
+
+    if (updatedWishlist.length !== initialLength) {
+      localStorage.setItem(WISHLIST_KEY, JSON.stringify(updatedWishlist));
+
+      // Update Redux store
+      store.dispatch(removeFromWishlistSuccess(localStorageProductId));
+
+      // Refresh wishlist count
+      await refreshWishlistCount();
+      return { success: true, message: "Product removed from wishlist" };
+    } else {
+      return { success: false, message: "Product not found in wishlist" };
+    }
   } catch (error) {
     console.error("Error removing product from wishlist:", error);
     return {
@@ -264,15 +293,11 @@ export const isInWishlist = (productId) => {
   if (!productId) return false;
 
   try {
-    // Get items from Redux store
+    // Get items from Redux store for faster check
     const state = store.getState();
-    const items = state.wishlist.items || [];
+    const items = state.wishlist.items;
 
-    return items.some(
-      (item) =>
-        (item._id && item._id.toString() === productId.toString()) ||
-        (item.product_id && item.product_id.toString() === productId.toString())
-    );
+    return items.some((item) => item._id === productId);
   } catch (error) {
     console.error("Error checking wishlist:", error);
     return false;
@@ -314,11 +339,13 @@ export const clearWishlist = async () => {
         }
       } catch (error) {
         console.error("API error clearing wishlist:", error);
-        return { success: false, message: "Failed to clear wishlist" };
       }
     }
 
-    // For non-logged in users, just update Redux store
+    // For non-logged in users or if API call fails, use localStorage
+    localStorage.removeItem(WISHLIST_KEY);
+
+    // Update Redux store
     store.dispatch(clearWishlistSuccess());
 
     // Refresh wishlist count

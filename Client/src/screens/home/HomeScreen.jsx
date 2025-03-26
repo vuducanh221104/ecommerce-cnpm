@@ -14,6 +14,7 @@ const HomeScreenWrapper = styled.main``;
 
 const HomeScreen = () => {
   const [products, setProducts] = useState([]);
+  console.log(products);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   console.log(products);

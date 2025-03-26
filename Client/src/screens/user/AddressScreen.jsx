@@ -43,44 +43,48 @@ const breadcrumbItems = [
     link: "/",
   },
   { label: "Account", link: "/account" },
-  { label: "Add Address", link: "/account/add" },
+  { label: "Add Address", link: "" },
 ];
 
 const AddressScreen = () => {
   const navigate = useNavigate();
   const { addressId } = useParams(); // For editing existing address
   const isEditMode = !!addressId;
-
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     street: "",
     ward: "",
     district: "",
     city: "",
-    country: "",
-    is_default: false,
+    country: "Việt Nam",
+    is_default: true,
     tag: "Home",
   });
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  // Fetch user data on component mount
+  // Cập nhật breadcrumb đúng với chế độ
+  const currentBreadcrumbItems = [...breadcrumbItems];
+  if (isEditMode) {
+    currentBreadcrumbItems[2] = { label: "Edit Address", link: "" };
+  }
+
   useEffect(() => {
     const userData = getCurrentUser();
     if (!userData) {
-      toast.error("Please login to add an address");
+      // Redirect to login if not logged in
+      toast.error("Please login to manage addresses");
       navigate("/sign_in");
       return;
     }
 
     setUser(userData);
 
-    // If in edit mode, fetch the address
     if (isEditMode) {
       fetchAddress(addressId);
-    } else if (userData.address) {
-      // Pre-fill with existing address data if available and not in edit mode
+    } else if (userData.address && userData.address.street) {
+      // Pre-fill form with default user address if it exists
       setFormData({
         name: userData.full_name || "",
         street: userData.address.street || "",
@@ -98,25 +102,32 @@ const AddressScreen = () => {
     try {
       setLoading(true);
 
-      // In a real production app with multiple addresses, you would fetch a specific address
+      // Trong trường hợp thật, sẽ fetch từ API
       // const response = await httpRequest.get(`api/v1/user/address/${id}`);
 
-      // For now, we use the address in user data from localStorage
+      // Hiện tại, chúng ta dùng dữ liệu từ localStorage
       const userData = getCurrentUser();
-      if (userData && userData.address) {
+
+      // Xử lý trường hợp là địa chỉ mặc định (từ thông tin user)
+      if (id === "default_address" && userData && userData.address) {
         const addressData = {
           name: userData.full_name || "",
           street: userData.address.street || "",
           ward: userData.address.ward || "",
           district: userData.address.district || "",
           city: userData.address.city || "",
-          country: userData.address.country || "",
+          country: userData.address.country || "Việt Nam",
           is_default: true,
           tag: "Home",
         };
 
         setFormData(addressData);
+        setLoading(false);
+        return;
       }
+
+      // TODO: Trong ứng dụng thực tế, bạn sẽ lấy thông tin địa chỉ từ danh sách địa chỉ dựa trên ID
+
       setLoading(false);
     } catch (error) {
       console.error("Error fetching address:", error);
@@ -212,7 +223,7 @@ const AddressScreen = () => {
 
         // Update local user state if available
         if (response.user) {
-          localStorage.setItem("achats_user", JSON.stringify(response.user));
+          localStorage.setItem("ducanh_user", JSON.stringify(response.user));
         }
 
         // Return to account page
@@ -231,7 +242,7 @@ const AddressScreen = () => {
   return (
     <AddressScreenWrapper className="page-py-spacing">
       <Container>
-        <Breadcrumb items={breadcrumbItems} />
+        <Breadcrumb items={currentBreadcrumbItems} />
         <UserDashboardWrapper>
           <UserMenu />
           <UserContent>

@@ -11,6 +11,7 @@ import {
 import { currencyFormat } from "../../utils/helper";
 import { toast } from "react-hot-toast";
 import { updateCartSuccess } from "../../redux/slices/userSlice";
+import { useState } from "react";
 
 const CartTableRowWrapper = styled.tr`
   .cart-tbl {
@@ -70,10 +71,22 @@ const CartTableRowWrapper = styled.tr`
 const CartItem = ({ cartItem, onCartUpdate }) => {
   const { currentUser } = useSelector((state) => state.user);
   const dispatch = useDispatch();
+  const [updateAttempts, setUpdateAttempts] = useState(0);
+  const maxRetries = 2; // Maximum number of retries
 
   const handleQuantityChange = async (newQuantity) => {
     if (newQuantity > 0) {
       try {
+        console.log("Updating cart item quantity:", {
+          userId: currentUser._id,
+          productId: cartItem.product_id,
+          color: cartItem.color,
+          size: cartItem.size,
+          newQuantity: newQuantity,
+          productIdType: typeof cartItem.product_id,
+          updateAttempt: updateAttempts + 1,
+        });
+
         const response = await updateCartItemQuantity(
           currentUser._id,
           cartItem.product_id,
@@ -82,16 +95,49 @@ const CartItem = ({ cartItem, onCartUpdate }) => {
           newQuantity
         );
 
+        console.log("Update quantity response:", response);
+
         if (response.success) {
+          // Reset attempts on success
+          setUpdateAttempts(0);
           onCartUpdate(response.cart);
           dispatch(updateCartSuccess(response.cart));
           toast.success("Cart updated successfully");
         } else {
-          toast.error(response.message || "Failed to update cart");
+          console.error("Server returned error:", response.message);
+
+          // Try again with different approach if under max retries
+          if (updateAttempts < maxRetries) {
+            setUpdateAttempts((prev) => prev + 1);
+
+            // Simply retry the operation
+            toast.error(
+              `Failed to update cart: ${response.message}. Retrying...`
+            );
+
+            // Wait briefly before retrying
+            setTimeout(() => {
+              handleQuantityChange(newQuantity);
+            }, 1000);
+          } else {
+            setUpdateAttempts(0);
+            toast.error(
+              response.message ||
+                "Failed to update cart after multiple attempts"
+            );
+          }
         }
       } catch (error) {
         console.error("Error updating cart:", error);
-        toast.error("Failed to update cart");
+
+        // Try again if under max retries
+        if (updateAttempts < maxRetries) {
+          setUpdateAttempts((prev) => prev + 1);
+          toast.error("Error updating cart. Retrying...");
+        } else {
+          setUpdateAttempts(0);
+          toast.error("Failed to update cart after multiple attempts");
+        }
       }
     }
   };

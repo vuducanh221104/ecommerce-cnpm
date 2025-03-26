@@ -8,9 +8,51 @@ import {
   logOutFailed,
   updateUserSuccess,
   updateUserFailed,
+  updateCartSuccess,
 } from "../redux/slices/userSlice";
 import { setWishlistItems } from "../redux/slices/wishlistSlice";
-const TOKEN_KEY = "achats_token";
+const USER_KEY = "ducanh_user";
+const TOKEN_KEY = "ducanh_token";
+
+// Check if user is already logged in
+export const checkAuthState = async () => {
+  try {
+    const storedUser = localStorage.getItem(USER_KEY);
+    const storedToken = localStorage.getItem(TOKEN_KEY);
+
+    if (storedUser && storedToken) {
+      const user = JSON.parse(storedUser);
+
+      // Update Redux state
+      store.dispatch(loginSuccess(user));
+      store.dispatch(updateUserSuccess(user));
+
+      // Update wishlist in Redux if the user has a wishlist
+      if (user.wishlist) {
+        store.dispatch(setWishlistItems(user.wishlist));
+      }
+
+      // Cập nhật giỏ hàng trong Redux store
+      try {
+        const cartResponse = await httpRequest.get(`api/v1/cart/${user._id}`);
+        if (cartResponse.data.success) {
+          store.dispatch(updateCartSuccess(cartResponse.data.cart || []));
+          // Trigger cart updated event
+          window.dispatchEvent(new Event("cartUpdated"));
+        }
+      } catch (cartError) {
+        console.error("Error fetching cart during auth check:", cartError);
+      }
+
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error("Error checking auth state:", error);
+    return false;
+  }
+};
 
 // Register user
 export const registerUser = async (userData) => {
@@ -34,7 +76,8 @@ export const loginUser = async (usernameOrEmail, password) => {
     });
 
     if (response.data.success) {
-      // Store token in localStorage (still needed for API calls)
+      // Store token in localStorage
+      localStorage.setItem(USER_KEY, JSON.stringify(response.data.user));
       localStorage.setItem(TOKEN_KEY, response.data.accessToken);
 
       // Update Redux state
@@ -46,11 +89,22 @@ export const loginUser = async (usernameOrEmail, password) => {
         store.dispatch(setWishlistItems(response.data.user.wishlist));
       }
 
+      // Cập nhật giỏ hàng trong Redux store
+      try {
+        const cartResponse = await httpRequest.get(
+          `api/v1/cart/${response.data.user._id}`
+        );
+        if (cartResponse.data.success) {
+          store.dispatch(updateCartSuccess(cartResponse.data.cart || []));
+          // Trigger cart updated event
+          window.dispatchEvent(new Event("cartUpdated"));
+        }
+      } catch (cartError) {
+        console.error("Error fetching cart after login:", cartError);
+      }
+
       // Dispatch storage event for other components to detect
       window.dispatchEvent(new Event("storage"));
-      // Also trigger a cart and wishlist update
-      window.dispatchEvent(new Event("cartUpdated"));
-      window.dispatchEvent(new Event("wishlistUpdated"));
     }
 
     return response.data;
@@ -68,17 +122,24 @@ export const logoutUser = async () => {
     const response = await httpRequest.post(`api/v1/auth/logout`);
 
     if (response.data.success) {
-      // Clear localStorage token
+      // Clear localStorage
+      localStorage.removeItem(USER_KEY);
       localStorage.removeItem(TOKEN_KEY);
 
       // Update Redux state
       store.dispatch(logOutSuccess());
+      store.dispatch(updateUserSuccess(null));
+
+      // Reload wishlist from localStorage after logout
+      const localWishlist = localStorage.getItem("achats_wishlist");
+      if (localWishlist) {
+        store.dispatch(setWishlistItems(JSON.parse(localWishlist)));
+      } else {
+        store.dispatch(setWishlistItems([]));
+      }
 
       // Dispatch storage event for other components to detect
       window.dispatchEvent(new Event("storage"));
-      // Also trigger a cart and wishlist update
-      window.dispatchEvent(new Event("cartUpdated"));
-      window.dispatchEvent(new Event("wishlistUpdated"));
     }
 
     return response.data;
@@ -88,11 +149,9 @@ export const logoutUser = async () => {
     console.error("Logout error:", error);
 
     // Even if API fails, we still clear local storage
+    localStorage.removeItem(USER_KEY);
     localStorage.removeItem(TOKEN_KEY);
-    store.dispatch(logOutSuccess());
     window.dispatchEvent(new Event("storage"));
-    window.dispatchEvent(new Event("cartUpdated"));
-    window.dispatchEvent(new Event("wishlistUpdated"));
 
     return { success: true, message: "Logged out locally" };
   }
@@ -104,6 +163,9 @@ export const updateUserInfo = async (userData) => {
     const response = await httpRequest.post(`api/v1/auth/update`, userData);
 
     if (response.data.success) {
+      // Update localStorage
+      localStorage.setItem(USER_KEY, JSON.stringify(response.data.user));
+
       // Update Redux state
       store.dispatch(updateUserSuccess(response.data.user));
 
@@ -149,6 +211,9 @@ export const addAddress = async (addressData) => {
     const response = await httpRequest.post(`api/v1/auth/address`, addressData);
 
     if (response.data.success) {
+      // Update localStorage
+      localStorage.setItem(USER_KEY, JSON.stringify(response.data.user));
+
       // Update Redux state
       store.dispatch(updateUserSuccess(response.data.user));
 
@@ -178,6 +243,9 @@ export const updateAddress = async (addressId, addressData) => {
     );
 
     if (response.data.success) {
+      // Update localStorage
+      localStorage.setItem(USER_KEY, JSON.stringify(response.data.user));
+
       // Update Redux state
       store.dispatch(updateUserSuccess(response.data.user));
 
@@ -204,11 +272,14 @@ export const updateAddress = async (addressId, addressData) => {
 // Remove address
 export const removeAddress = async (addressId, userId) => {
   try {
-    const response = await httpRequest.delete(
+    const response = await httpRequest.deleted(
       `api/v1/auth/address/${addressId}?user_id=${userId}`
     );
 
     if (response.data.success) {
+      // Update localStorage
+      localStorage.setItem(USER_KEY, JSON.stringify(response.data.user));
+
       // Update Redux state
       store.dispatch(updateUserSuccess(response.data.user));
 
@@ -253,30 +324,25 @@ export const getUserAddresses = async (userId) => {
   }
 };
 
-// Check if user is logged in
-export const isLoggedIn = () => {
+// Get current user from localStorage
+export const getCurrentUser = () => {
   try {
-    const state = store.getState();
-    const user = state.user.currentUser;
-    const token = getAuthToken();
-
-    // If either the user or token is missing, user is not logged in
-    if (!user || !token) {
-      return false;
-    }
-
-    // Additional check for token validity could be added here
-    // For now we just check if both user and token exist
-    return true;
+    const userJson = localStorage.getItem(USER_KEY);
+    return userJson ? JSON.parse(userJson) : null;
   } catch (error) {
-    console.error("Error checking login status:", error);
-    return false;
+    console.error("Error getting current user:", error);
+    return null;
   }
 };
 
 // Get auth token from localStorage
 export const getAuthToken = () => {
   return localStorage.getItem(TOKEN_KEY);
+};
+
+// Check if user is logged in
+export const isLoggedIn = () => {
+  return !!getCurrentUser() && !!getAuthToken();
 };
 
 // Setup auth header for axios

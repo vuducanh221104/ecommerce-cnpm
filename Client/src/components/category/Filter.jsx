@@ -1,125 +1,176 @@
+import { useState, useEffect } from "react";
 import styled from "styled-components";
+import { defaultTheme } from "../../styles/themes/default";
+import * as productService from "../../services/productService";
+import * as categoryService from "../../services/categoryService";
+import * as materialService from "../../services/materialService";
 import { PropTypes } from "prop-types";
 
 const FilterWrapper = styled.div`
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
+  padding: 16px;
 
   .filter-section {
-    margin-bottom: 20px;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
+    margin-bottom: 24px;
 
     h3 {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 600;
       margin-bottom: 12px;
-      color: #333;
-    }
-  }
-
-  .price-range {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-
-    .price-input-wrapper {
-      position: relative;
-      flex: 1;
-
-      input {
-        width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
-        transition: all 0.2s;
-        cursor: pointer;
-
-        &:focus {
-          outline: none;
-          border-color: #000;
-          box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
-        }
-
-        &:hover {
-          border-color: #999;
-        }
-
-        &::-webkit-inner-spin-button,
-        &::-webkit-outer-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-      }
-
-      &.active input {
-        border-color: #000;
-        background-color: #f8f8f8;
-        font-weight: 500;
-      }
+      color: ${defaultTheme.color_outerspace};
     }
 
-    .separator {
-      color: #666;
-      font-weight: 500;
-    }
-  }
-
-  .sort-options {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    .sort-option {
+    .price-range {
       display: flex;
       align-items: center;
       gap: 8px;
-      cursor: pointer;
-      color: #666;
-      transition: all 0.2s;
-      padding: 8px;
-      border-radius: 4px;
 
-      &:hover {
-        color: #000;
-        background-color: #f5f5f5;
+      .price-input-wrapper {
+        flex: 1;
+        position: relative;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow: hidden;
+        transition: all 0.2s;
+
+        &.active {
+          border-color: ${defaultTheme.color_sea_green};
+        }
+
+        input {
+          width: 100%;
+          padding: 8px 12px;
+          border: none;
+          outline: none;
+          font-size: 14px;
+
+          &::-webkit-outer-spin-button,
+          &::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+          }
+
+          &[type="number"] {
+            -moz-appearance: textfield;
+          }
+        }
       }
 
-      &.active {
-        color: #000;
-        background-color: #f0f0f0;
+      .separator {
+        font-weight: 500;
+        color: #888;
+      }
+    }
+  }
+
+  .sort-section {
+    margin-top: 16px;
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: white;
+      outline: none;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:focus {
+        border-color: ${defaultTheme.color_sea_green};
+      }
+    }
+  }
+
+  .list-filter {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 8px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #aaa;
+      border-radius: 8px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: #888;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      padding: 8px 10px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      &.selected {
+        background-color: rgba(48, 160, 122, 0.1);
+        color: ${defaultTheme.color_sea_green};
         font-weight: 500;
       }
 
-      label {
-        cursor: pointer;
-        flex: 1;
-        user-select: none;
-        position: relative;
-        padding-left: 24px;
-      }
       input {
-        cursor: pointer;
-      }
-
-      input[type="radio"]:checked + label:before {
-        border-color: #000;
-      }
-
-      input[type="radio"]:checked + label:after {
-        opacity: 1;
+        margin-right: 8px;
       }
     }
   }
 `;
 
 const Filter = ({ onFilterChange, filters }) => {
+  const [categories, setCategories] = useState([]);
+  const [materials, setMaterials] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedMaterials, setSelectedMaterials] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch categories and materials when component mounts
+  useEffect(() => {
+    const fetchFiltersData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch categories
+        const categoryResult = await categoryService.getAllCategories();
+        if (categoryResult.success) {
+          setCategories(categoryResult.data || []);
+        }
+
+        // Fetch materials
+        const materialResult = await materialService.getAllMaterials();
+        if (materialResult.success) {
+          setMaterials(materialResult.data || []);
+        }
+      } catch (error) {
+        console.error("Error fetching filter data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFiltersData();
+  }, []);
+
+  // Handle price input changes
   const handlePriceChange = (e) => {
     const { name, value } = e.target;
     onFilterChange({
@@ -128,6 +179,7 @@ const Filter = ({ onFilterChange, filters }) => {
     });
   };
 
+  // Handle sort selection change
   const handleSortChange = (e) => {
     onFilterChange({
       ...filters,
@@ -135,8 +187,101 @@ const Filter = ({ onFilterChange, filters }) => {
     });
   };
 
+  // Handle category selection
+  const handleCategoryChange = (categoryId) => {
+    const updatedCategories = selectedCategories.includes(categoryId)
+      ? selectedCategories.filter((id) => id !== categoryId)
+      : [...selectedCategories, categoryId];
+
+    setSelectedCategories(updatedCategories);
+
+    onFilterChange({
+      ...filters,
+      categories: updatedCategories,
+    });
+  };
+
+  // Handle material selection
+  const handleMaterialChange = (materialId) => {
+    const updatedMaterials = selectedMaterials.includes(materialId)
+      ? selectedMaterials.filter((id) => id !== materialId)
+      : [...selectedMaterials, materialId];
+
+    setSelectedMaterials(updatedMaterials);
+
+    onFilterChange({
+      ...filters,
+      materials: updatedMaterials,
+    });
+  };
+
   return (
     <FilterWrapper>
+      {/* Categories Section */}
+      <div className="filter-section">
+        <h3>Categories</h3>
+        <div className="list-filter">
+          <ul>
+            {categories.map((category) => (
+              <li
+                key={category._id}
+                className={
+                  selectedCategories.includes(category._id) ? "selected" : ""
+                }
+                onClick={() => handleCategoryChange(category._id)}
+              >
+                <input
+                  type="checkbox"
+                  id={`category-${category._id}`}
+                  checked={selectedCategories.includes(category._id)}
+                  onChange={() => {}}
+                />
+                <label htmlFor={`category-${category._id}`}>
+                  {category.name}
+                </label>
+              </li>
+            ))}
+            {categories.length === 0 && !loading && (
+              <li className="no-items">No categories found</li>
+            )}
+            {loading && <li className="loading">Loading categories...</li>}
+          </ul>
+        </div>
+      </div>
+
+      {/* Materials Section */}
+      <div className="filter-section">
+        <h3>Materials</h3>
+        <div className="list-filter">
+          <ul>
+            {materials.map((material) => (
+              <li
+                key={material._id}
+                className={
+                  selectedMaterials.includes(material._id) ? "selected" : ""
+                }
+                onClick={() => handleMaterialChange(material._id)}
+              >
+                <input
+                  type="checkbox"
+                  id={`material-${material._id}`}
+                  checked={selectedMaterials.includes(material._id)}
+                  onChange={() => {}}
+                />
+                <label htmlFor={`material-${material._id}`}>
+                  {material.name}
+                </label>
+              </li>
+            ))}
+            {materials.length === 0 && !loading && (
+              <li className="no-items">No materials found</li>
+            )}
+            {loading && <li className="loading">Loading materials...</li>}
+          </ul>
+        </div>
+      </div>
+
+      {/* Price Range Section */}
       <div className="filter-section">
         <h3>Price Range</h3>
         <div className="price-range">
@@ -172,100 +317,20 @@ const Filter = ({ onFilterChange, filters }) => {
         </div>
       </div>
 
-      <div className="filter-section">
+      {/* Sort Section */}
+      <div className="filter-section sort-section">
         <h3>Sort By</h3>
-        <div className="sort-options">
-          <div
-            className={`sort-option ${
-              filters.sortBy === "price-asc" ? "active" : ""
-            }`}
-          >
-            <input
-              type="radio"
-              id="price-asc"
-              name="sort"
-              value="price-asc"
-              checked={filters.sortBy === "price-asc"}
-              onChange={handleSortChange}
-            />
-            <label htmlFor="price-asc">Price: Low to High</label>
-          </div>
-          <div
-            className={`sort-option ${
-              filters.sortBy === "price-desc" ? "active" : ""
-            }`}
-          >
-            <input
-              type="radio"
-              id="price-desc"
-              name="sort"
-              value="price-desc"
-              checked={filters.sortBy === "price-desc"}
-              onChange={handleSortChange}
-            />
-            <label htmlFor="price-desc">Price: High to Low</label>
-          </div>
-          <div
-            className={`sort-option ${
-              filters.sortBy === "name-asc" ? "active" : ""
-            }`}
-          >
-            <input
-              type="radio"
-              id="name-asc"
-              name="sort"
-              value="name-asc"
-              checked={filters.sortBy === "name-asc"}
-              onChange={handleSortChange}
-            />
-            <label htmlFor="name-asc">Name: A to Z</label>
-          </div>
-          <div
-            className={`sort-option ${
-              filters.sortBy === "name-desc" ? "active" : ""
-            }`}
-          >
-            <input
-              type="radio"
-              id="name-desc"
-              name="sort"
-              value="name-desc"
-              checked={filters.sortBy === "name-desc"}
-              onChange={handleSortChange}
-            />
-            <label htmlFor="name-desc">Name: Z to A</label>
-          </div>
-          <div
-            className={`sort-option ${
-              filters.sortBy === "date-desc" ? "active" : ""
-            }`}
-          >
-            <input
-              type="radio"
-              id="date-desc"
-              name="sort"
-              value="date-desc"
-              checked={filters.sortBy === "date-desc"}
-              onChange={handleSortChange}
-            />
-            <label htmlFor="date-desc">Newest First</label>
-          </div>
-          <div
-            className={`sort-option ${
-              filters.sortBy === "date-asc" ? "active" : ""
-            }`}
-          >
-            <input
-              type="radio"
-              id="date-asc"
-              name="sort"
-              value="date-asc"
-              checked={filters.sortBy === "date-asc"}
-              onChange={handleSortChange}
-            />
-            <label htmlFor="date-asc">Oldest First</label>
-          </div>
-        </div>
+        <select
+          value={filters.sortBy || "date-desc"}
+          onChange={handleSortChange}
+        >
+          <option value="date-desc">Newest First</option>
+          <option value="date-asc">Oldest First</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="name-asc">Name: A to Z</option>
+          <option value="name-desc">Name: Z to A</option>
+        </select>
       </div>
     </FilterWrapper>
   );
@@ -277,6 +342,8 @@ Filter.propTypes = {
     minPrice: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     maxPrice: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     sortBy: PropTypes.string,
+    categories: PropTypes.array,
+    materials: PropTypes.array,
   }).isRequired,
 };
 

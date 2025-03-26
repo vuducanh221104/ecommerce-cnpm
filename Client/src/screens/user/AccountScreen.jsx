@@ -352,6 +352,13 @@ const AccountScreen = () => {
     try {
       setLoading(true);
 
+      // Nếu là địa chỉ mặc định, hiển thị thông báo
+      if (addressId === "default_address") {
+        toast.error("Cannot remove default address. Edit it instead.");
+        setLoading(false);
+        return;
+      }
+
       const response = await removeAddress(addressId, user._id);
 
       if (response && response.success) {
@@ -426,7 +433,11 @@ const AccountScreen = () => {
           </button>
           <div className="btn-separator"></div>
           <Link
-            to={`/account/edit-address/${address._id}`}
+            to={
+              address._id === "default_address"
+                ? "/account/add"
+                : `/account/edit-address/${address._id}`
+            }
             className="text-base text-outerspace font-semibold"
           >
             Edit

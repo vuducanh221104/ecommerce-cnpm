@@ -6,6 +6,7 @@ import Breadcrumb from "../../components/common/Breadcrumb";
 import CategoryGrid from "../../components/category/CategoryGrid";
 import Filter from "../../components/category/Filter";
 import MobileFilter from "../../components/category/MobileFilter";
+import ModalLoading from "../../components/common/ModalLoading";
 import { getAllProducts } from "../../services/productService";
 
 const SearchScreenWrapper = styled.main`
@@ -88,6 +89,8 @@ const SearchScreen = () => {
     minPrice: "",
     maxPrice: "",
     sortBy: "date-desc",
+    categories: [],
+    materials: [],
   });
 
   // Function to fetch all products and filter by search query
@@ -151,6 +154,30 @@ const SearchScreen = () => {
       );
     }
 
+    // Apply category filters if any
+    if (filters.categories && filters.categories.length > 0) {
+      filtered = filtered.filter((product) => {
+        // Extract all category IDs from the product
+        const productCategoryIds = product.category_id.map((cat) =>
+          typeof cat === "object" ? cat._id : cat
+        );
+        // Check if any of the product's category IDs are in the selected categories
+        return filters.categories.some((id) => productCategoryIds.includes(id));
+      });
+    }
+
+    // Apply material filters if any
+    if (filters.materials && filters.materials.length > 0) {
+      filtered = filtered.filter((product) => {
+        // Extract all material IDs from the product
+        const productMaterialIds = product.material_id.map((mat) =>
+          typeof mat === "object" ? mat._id : mat
+        );
+        // Check if any of the product's material IDs are in the selected materials
+        return filters.materials.some((id) => productMaterialIds.includes(id));
+      });
+    }
+
     // Apply sorting
     switch (filters.sortBy) {
       case "price-asc":
@@ -194,16 +221,6 @@ const SearchScreen = () => {
     navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
-  if (loading) {
-    return (
-      <SearchScreenWrapper>
-        <Container>
-          <LoadingWrapper>Searching for products...</LoadingWrapper>
-        </Container>
-      </SearchScreenWrapper>
-    );
-  }
-
   if (error) {
     return (
       <SearchScreenWrapper>
@@ -229,28 +246,14 @@ const SearchScreen = () => {
             <span className="search-query">"{searchQuery}"</span>
           </h1>
           <p>
-            {filteredProducts.length}{" "}
-            {filteredProducts.length === 1 ? "product" : "products"} found
+            {loading
+              ? "Searching..."
+              : `${filteredProducts.length} ${
+                  filteredProducts.length === 1 ? "product" : "products"
+                } found`}
           </p>
 
           {/* Additional search box for refining search */}
-          <form onSubmit={handleSearchSubmit} className="mt-4">
-            <div className="flex max-w-md">
-              <input
-                type="text"
-                name="search-query"
-                defaultValue={searchQuery}
-                placeholder="Refine your search"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-black text-white rounded-r-md hover:bg-gray-800"
-              >
-                Search
-              </button>
-            </div>
-          </form>
         </SearchHeader>
 
         {!searchQuery ? (
@@ -271,7 +274,9 @@ const SearchScreen = () => {
                   filters={filters}
                 />
               </MobileFilterWrapper>
-              {filteredProducts.length > 0 ? (
+              {loading ? (
+                <ModalLoading />
+              ) : filteredProducts.length > 0 ? (
                 <CategoryGrid products={filteredProducts} />
               ) : (
                 <div className="text-center py-12">

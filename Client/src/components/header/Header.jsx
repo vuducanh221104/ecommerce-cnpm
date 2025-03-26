@@ -12,8 +12,12 @@ import { store } from "../../redux/store";
 import { useState, useEffect, useRef } from "react";
 import { searchProductsByQuery } from "../../services/productService";
 import { getWishlistItems } from "../../services/wishlistService";
-import { isLoggedIn, getAuthToken } from "../../services/authService";
-import UserAuthMenu from "./UserAuthMenu";
+import {
+  isLoggedIn,
+  logoutUser,
+  getCurrentUser,
+} from "../../services/authService";
+import { toast } from "react-hot-toast";
 
 const NavigationAndSearchWrapper = styled.div`
   column-gap: 20px;
@@ -101,6 +105,7 @@ const IconLinksWrapper = styled.div`
     height: 36px;
     border-radius: 6px;
     position: relative;
+    cursor: pointer;
 
     &.active {
       background-color: ${defaultTheme.color_sea_green};
@@ -110,7 +115,7 @@ const IconLinksWrapper = styled.div`
     }
 
     &:hover {
-      background-color: ${defaultTheme.color_whitesmoke};
+      background-color: #dddddd;
     }
 
     .badge {
@@ -271,6 +276,73 @@ const SearchDropdown = styled.div`
   }
 `;
 
+const UserMenuDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 220px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  padding: 16px 0;
+  z-index: 100;
+  margin-top: 10px;
+
+  &:before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    right: 20px;
+    width: 12px;
+    height: 12px;
+    background-color: white;
+    transform: rotate(45deg);
+    box-shadow: -2px -2px 5px rgba(0, 0, 0, 0.04);
+  }
+
+  .menu-header {
+    padding: 0 16px 12px;
+    border-bottom: 1px solid ${defaultTheme.color_anti_flash_white};
+    margin-bottom: 8px;
+
+    .user-name {
+      font-weight: 600;
+      font-size: 16px;
+      color: ${defaultTheme.color_outerspace};
+      margin-bottom: 4px;
+    }
+
+    .user-email {
+      font-size: 14px;
+      color: ${defaultTheme.color_gray};
+      word-break: break-all;
+    }
+  }
+
+  .menu-items {
+    list-style: none;
+
+    .menu-item {
+      display: block;
+      padding: 10px 16px;
+      color: ${defaultTheme.color_outerspace};
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: ${defaultTheme.color_anti_flash_white};
+      }
+
+      &.danger {
+        color: ${defaultTheme.color_danger};
+      }
+
+      i {
+        margin-right: 8px;
+      }
+    }
+  }
+`;
+
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -283,7 +355,8 @@ const Header = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const userIconRef = useRef(null);
 
   // Get wishlist count directly from Redux state
@@ -294,9 +367,22 @@ const Header = () => {
   const cartItems = useSelector((state) => state.user.cart || []);
   const cartCount = cartItems.length;
 
-  // Get current user from Redux state for authentication status
-  const currentUser = useSelector((state) => state.user.currentUser);
-  const isAuthenticated = !!currentUser && !!getAuthToken();
+  // Check if user is logged in
+  useEffect(() => {
+    const checkAuth = () => {
+      setIsAuthenticated(isLoggedIn());
+    };
+
+    // Initial check
+    checkAuth();
+
+    // Listen for storage events (login/logout from other tabs)
+    window.addEventListener("storage", checkAuth);
+
+    return () => {
+      window.removeEventListener("storage", checkAuth);
+    };
+  }, []);
 
   // Listen for wishlist updates (from other components/actions)
   useEffect(() => {
@@ -367,6 +453,20 @@ const Header = () => {
     return () => clearTimeout(debounceTimer);
   }, [searchQuery]);
 
+  // Xử lý đóng dropdown menu khi click bên ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userIconRef.current && !userIconRef.current.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const handleSearchChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -400,23 +500,21 @@ const Header = () => {
     }
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest(".search-container")) {
-        setShowDropdown(false);
-      }
-    };
+  // Xử lý toggle menu người dùng
+  const handleUserMenuToggle = () => {
+    setUserMenuOpen(!userMenuOpen);
+  };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Handle user menu toggle
-  const handleUserMenuToggle = (isOpen) => {
-    setIsUserMenuOpen(isOpen);
+  // Xử lý đăng xuất
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setUserMenuOpen(false);
+      toast.success("Đăng xuất thành công");
+      navigate("/");
+    } catch (error) {
+      toast.error("Không thể đăng xuất. Vui lòng thử lại.");
+    }
   };
 
   return (
@@ -439,7 +537,9 @@ const Header = () => {
                   alt="site logo"
                 />
               </div>
-              <span className="site-brand-text text-outerspace">achats.</span>
+              <span className="site-brand-text text-outerspace">
+                Ecommerce.
+              </span>
             </SiteBrandWrapper>
           </div>
           <NavigationAndSearchWrapper className="flex items-center">
@@ -559,21 +659,99 @@ const Header = () => {
 
             <div
               ref={userIconRef}
+              onClick={handleUserMenuToggle}
               className={`icon-link ${
                 location.pathname === "/account" ||
                 location.pathname === "/account/add" ||
-                isUserMenuOpen
+                userMenuOpen
                   ? "active"
                   : ""
-              } inline-flex items-center justify-center relative`}
+              } inline-flex items-center justify-center relative cursor-pointer`}
             >
-              <UserAuthMenu onUserMenuToggle={handleUserMenuToggle} />
               <img src={staticImages.user} alt="User Account" />
               {isAuthenticated && (
                 <span
                   className="w-3 h-3 bg-green-500 rounded-full absolute top-0 right-0"
                   style={{ top: "3px", right: "3px" }}
                 />
+              )}
+
+              {userMenuOpen && (
+                <UserMenuDropdown>
+                  {isAuthenticated ? (
+                    <>
+                      <div className="menu-header">
+                        <div className="user-name">
+                          {getCurrentUser()?.full_name ||
+                            getCurrentUser()?.user_name ||
+                            "User"}
+                        </div>
+                        <div className="user-email">
+                          {getCurrentUser()?.email || ""}
+                        </div>
+                      </div>
+
+                      <ul className="menu-items">
+                        <li>
+                          <Link
+                            className="menu-item"
+                            to="/account"
+                            onClick={() => setUserMenuOpen(false)}
+                          >
+                            <i className="bi bi-person"></i> My Account
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            className="menu-item"
+                            to="/order"
+                            onClick={() => setUserMenuOpen(false)}
+                          >
+                            <i className="bi bi-bag"></i> Orders
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            className="menu-item"
+                            to="/wishlist"
+                            onClick={() => setUserMenuOpen(false)}
+                          >
+                            <i className="bi bi-heart"></i> Wishlist
+                          </Link>
+                        </li>
+                        <li>
+                          <button
+                            className="menu-item danger w-full text-left"
+                            onClick={handleLogout}
+                          >
+                            <i className="bi bi-box-arrow-right"></i> Logout
+                          </button>
+                        </li>
+                      </ul>
+                    </>
+                  ) : (
+                    <ul className="menu-items">
+                      <li>
+                        <Link
+                          className="menu-item"
+                          to="/sign_in"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <i className="bi bi-box-arrow-in-right"></i> Sign In
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          className="menu-item"
+                          to="/sign_up"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <i className="bi bi-person-plus"></i> Sign Up
+                        </Link>
+                      </li>
+                    </ul>
+                  )}
+                </UserMenuDropdown>
               )}
             </div>
 

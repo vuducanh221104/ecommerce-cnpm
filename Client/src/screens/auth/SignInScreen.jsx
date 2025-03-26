@@ -5,10 +5,10 @@ import { staticImages } from "../../utils/images";
 import AuthOptions from "../../components/auth/AuthOptions";
 import { FormElement, Input } from "../../styles/form";
 import PasswordInput from "../../components/auth/PasswordInput";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { BaseButtonBlack } from "../../styles/button";
 import { breakpoints, defaultTheme } from "../../styles/themes/default";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { loginUser } from "../../services/authService";
 import { toast } from "react-hot-toast";
 
@@ -57,12 +57,23 @@ const SignInScreenWrapper = styled.section`
 
 const SignInScreen = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     usernameOrEmail: "",
     password: "",
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [returnUrl, setReturnUrl] = useState("/");
+
+  // Extract returnUrl from query parameters
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const urlReturnPath = searchParams.get("returnUrl");
+    if (urlReturnPath) {
+      setReturnUrl(urlReturnPath);
+    }
+  }, [location]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -111,7 +122,8 @@ const SignInScreen = () => {
 
       if (response.success) {
         toast.success("Login successful!");
-        navigate("/"); // Redirect to home page
+        // Redirect to returnUrl instead of home page
+        navigate(returnUrl);
       } else {
         setErrors({
           general: response.message || "Login failed. Please try again.",

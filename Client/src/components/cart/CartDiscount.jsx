@@ -5,6 +5,7 @@ import {
   BaseLinkOutlinePlatinum,
 } from "../../styles/button";
 import { breakpoints, defaultTheme } from "../../styles/themes/default";
+import { PropTypes } from "prop-types";
 
 const CartDiscountWrapper = styled.div`
   @media (max-width: ${breakpoints.xl}) {
@@ -30,20 +31,26 @@ const CartDiscountWrapper = styled.div`
     padding-right: 12px;
     border-right: none;
   }
-  
+
   .coupon-btn {
     padding: 2px 16px;
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
   }
 
-  .contd-shop-btn {
-    height: 40px;
+  .action-buttons {
+    display: flex;
+    gap: 10px;
     margin-top: 10px;
+  }
+
+  .btn {
+    height: 40px;
+    flex: 1;
   }
 `;
 
-const CartDiscount = () => {
+const CartDiscount = ({ onClearCart }) => {
   return (
     <CartDiscountWrapper>
       <h3 className="text-xxl text-outerspace">Discount Codes</h3>
@@ -65,15 +72,27 @@ const CartDiscount = () => {
           </BaseButtonOuterspace>
         </div>
       </form>
-      <BaseLinkOutlinePlatinum
-        as={BaseLinkOutlinePlatinum}
-        to="/"
-        className="contd-shop-btn w-full text-gray"
-      >
-        continue shopping
-      </BaseLinkOutlinePlatinum>
+      <div className="action-buttons">
+        <BaseLinkOutlinePlatinum
+          as={BaseLinkOutlinePlatinum}
+          to="/"
+          className="btn text-gray"
+        >
+          Continue Shopping
+        </BaseLinkOutlinePlatinum>
+
+        {onClearCart && (
+          <BaseButtonOuterspace onClick={onClearCart} className="btn">
+            Clear Cart
+          </BaseButtonOuterspace>
+        )}
+      </div>
     </CartDiscountWrapper>
   );
 };
 
 export default CartDiscount;
+
+CartDiscount.propTypes = {
+  onClearCart: PropTypes.func,
+};

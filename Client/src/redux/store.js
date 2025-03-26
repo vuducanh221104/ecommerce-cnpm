@@ -2,31 +2,28 @@ import { configureStore } from "@reduxjs/toolkit";
 import sidebarReducer from "./slices/sidebarSlice";
 import userReducer from "./slices/userSlice";
 import wishlistReducer from "./slices/wishlistSlice";
-
-// Redux Persist
 import { persistStore, persistReducer } from "redux-persist";
-import storage from "redux-persist/lib/storage"; // defaults to localStorage for web
+import storage from "redux-persist/lib/storage";
 
-// Persist config
-const userPersistConfig = {
-  key: "user",
+// Configure persist options
+const persistConfig = {
+  key: "root",
   storage,
-  whitelist: ["currentUser", "cart"], // only persist currentUser and cart
-};
-
-const wishlistPersistConfig = {
-  key: "wishlist",
-  storage,
-  whitelist: ["items"], // only persist items array
+  whitelist: ["user", "wishlist"], // Chỉ lưu state của user và wishlist
 };
 
 // Create persisted reducers
-const persistedUserReducer = persistReducer(userPersistConfig, userReducer);
+const persistedUserReducer = persistReducer(
+  { ...persistConfig, key: "user" },
+  userReducer
+);
+
 const persistedWishlistReducer = persistReducer(
-  wishlistPersistConfig,
+  { ...persistConfig, key: "wishlist" },
   wishlistReducer
 );
 
+// Configure store
 export const store = configureStore({
   reducer: {
     sidebar: sidebarReducer,
@@ -36,10 +33,10 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        // Ignore these action types
         ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
       },
     }),
 });
 
+// Create persistor
 export const persistor = persistStore(store);
