@@ -32,6 +32,22 @@ class CartController {
             const { userId } = req.params;
             const cartItem = req.body;
 
+            // Validate that the cart item has all required fields
+            if (
+                !cartItem.product_id ||
+                !cartItem.name ||
+                !cartItem.color ||
+                !cartItem.size ||
+                !cartItem.quantity ||
+                !cartItem.price ||
+                !cartItem.price.original
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing required cart item fields',
+                });
+            }
+
             // Find the user
             const user = await User.findById(userId);
             if (!user) {
@@ -55,7 +71,21 @@ class CartController {
                 user.cart[existingItemIndex].quantity += cartItem.quantity;
             } else {
                 // Add new item if it doesn't exist
-                user.cart.push(cartItem);
+                // Ensure all required fields are present
+                const newCartItem = {
+                    product_id: cartItem.product_id,
+                    name: cartItem.name,
+                    slug: cartItem.slug || '',
+                    thumb: cartItem.thumb || '',
+                    price: {
+                        original: cartItem.price.original,
+                        discount: cartItem.price.discount || 0,
+                    },
+                    quantity: cartItem.quantity,
+                    color: cartItem.color,
+                    size: cartItem.size,
+                };
+                user.cart.push(newCartItem);
             }
 
             // Save updated cart
@@ -82,19 +112,73 @@ class CartController {
             const { userId } = req.params;
             const { product_id, color, size, quantity } = req.body;
 
+            console.log('Updating cart item quantity:', {
+                userId,
+                product_id,
+                color,
+                size,
+                quantity,
+                product_id_type: typeof product_id,
+                product_id_value: product_id ? product_id.toString() : 'null',
+            });
+
+            if (!product_id) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'product_id is required',
+                });
+            }
+
             // Find the user
             const user = await User.findById(userId);
             if (!user) {
                 return res.status(404).json({ success: false, message: 'User not found' });
             }
 
-            // Find the item in cart
-            const itemIndex = user.cart.findIndex(
-                (item) => item.product_id === product_id && item.color === color && item.size === size,
-            );
+            if (!user.cart || !Array.isArray(user.cart)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'User cart is not initialized properly',
+                    cart: user.cart,
+                });
+            }
+
+            console.log(`User cart has ${user.cart.length} items`);
+
+            // Find the item in cart - convert ObjectId to string for comparison
+            const itemIndex = user.cart.findIndex((item) => {
+                if (!item.product_id) {
+                    console.log('Cart item has no product_id:', item);
+                    return false;
+                }
+
+                const itemProductId = item.product_id.toString();
+                const requestProductId = product_id.toString();
+
+                console.log(
+                    `Comparing: ${itemProductId} === ${requestProductId}, ${item.color} === ${color}, ${item.size} === ${size}`,
+                );
+
+                return itemProductId === requestProductId && item.color === color && item.size === size;
+            });
+
+            console.log(`Item index in cart: ${itemIndex}`);
 
             if (itemIndex === -1) {
-                return res.status(404).json({ success: false, message: 'Item not found in cart' });
+                // Log all cart items to help diagnose
+                console.log(
+                    'Cart items:',
+                    user.cart.map((item) => ({
+                        product_id: item.product_id ? item.product_id.toString() : 'null',
+                        color: item.color,
+                        size: item.size,
+                    })),
+                );
+
+                return res.status(404).json({
+                    success: false,
+                    message: 'Item not found in cart. Check product_id, color, and size match exactly.',
+                });
             }
 
             // Update quantity

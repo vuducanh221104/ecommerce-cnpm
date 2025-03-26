@@ -24,7 +24,7 @@ class AuthController {
             // Create JWT token
             const accessToken = jwt.sign(
                 { _id: user._id, role: user.role },
-                process.env.JWT_ACCESS_KEY || 'achats_jwt_secret_key',
+                process.env.JWT_ACCESS_KEY || 'ducanh_jwt_secret_key',
                 { expiresIn: '1d' },
             );
 

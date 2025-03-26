@@ -231,5 +231,23 @@ class CategoryController {
             res.status(500).json({ message: error.message });
         }
     }
+    // [GET] Get all categories
+    async getAllCategories(req, res) {
+        try {
+            const categories = await Category.find({}).select('_id name slug');
+
+            return res.status(200).json({
+                success: true,
+                data: categories,
+            });
+        } catch (error) {
+            console.error('Error fetching all categories:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Server error',
+                error: error.message,
+            });
+        }
+    }
 }
 module.exports = new CategoryController();

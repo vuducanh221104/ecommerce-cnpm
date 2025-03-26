@@ -35,4 +35,24 @@ router.delete('/:id', ProductController.deleteProduct);
 // Add a comment to a product
 router.post('/:id/comment', ProductController.addComment);
 
+// Get comments for a product
+router.get('/:id/comments', ProductController.getProductComments);
+
+// Reply to a comment
+router.post('/:id/comment/:commentId/reply', ProductController.replyToComment);
+
+// Like a comment
+router.post('/:id/comment/:commentId/like', ProductController.likeComment);
+
+// Unlike a comment
+router.post('/:id/comment/:commentId/unlike', ProductController.unlikeComment);
+
+// Check user liked comments
+router.get('/:id/liked-comments', ProductController.checkUserLikedComments);
+
+// Admin comment management routes
+router.get('/comments/all', ProductController.getAllComments);
+router.patch('/:id/comment/:commentId/status', ProductController.updateCommentStatus);
+router.delete('/:id/comment/:commentId', ProductController.deleteComment);
+
 module.exports = router;

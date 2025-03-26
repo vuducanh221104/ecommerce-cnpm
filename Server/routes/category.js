@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const CategoryController = require('../Controllers/CategoryController');
 
+router.get('/all', CategoryController.getAllCategories);
 router.get('/:slug', CategoryController.categoryAndQueryMaterial);
 router.get('/', CategoryController.categoryList);
 router.post('/', CategoryController.categoryAdd);

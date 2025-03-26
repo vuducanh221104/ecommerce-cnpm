@@ -75,6 +75,11 @@ class WishlistController {
                 wishlistItem.category_name = 'N/A';
             }
 
+            // Set color to "Gray" if it's not provided
+            if (!wishlistItem.color) {
+                wishlistItem.color = 'Gray';
+            }
+
             // Set current date for addedAt
             wishlistItem.addedAt = new Date();
 

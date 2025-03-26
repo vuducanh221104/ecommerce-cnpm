@@ -96,6 +96,25 @@ class MaterialController {
             res.status(500).json({ message: error.message });
         }
     }
+
+    // [GET] Get all materials
+    async getAllMaterials(req, res) {
+        try {
+            const materials = await Material.find({}).select('_id name slug');
+
+            return res.status(200).json({
+                success: true,
+                data: materials,
+            });
+        } catch (error) {
+            console.error('Error fetching all materials:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Server error',
+                error: error.message,
+            });
+        }
+    }
 }
 
 module.exports = new MaterialController();

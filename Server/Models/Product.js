@@ -18,12 +18,28 @@ const PriceSchema = new Schema(
 const CommentSchema = new Schema(
     {
         user_id: { type: Schema.Types.ObjectId, ref: 'User' },
+        user_name: { type: String, required: true },
+        avatar: { type: String, default: '' },
         content: { type: String, required: true },
-        rating: { type: Number, required: true },
+        rating: { type: Number, required: true, min: 1, max: 5 },
+        likes: { type: Number, default: 0 },
+        likedBy: { type: [String], default: [] },
+        status: { type: String, enum: ['approved', 'pending', 'hidden'], default: 'pending' },
+        replies: [
+            {
+                user_id: { type: Schema.Types.ObjectId, ref: 'User' },
+                user_name: { type: String, required: true },
+                avatar: { type: String, default: '' },
+                content: { type: String, required: true },
+                created_at: { type: Date, default: Date.now },
+            },
+        ],
     },
     {
-        createdAt: 'created_at',
-        updatedAt: 'updated_at',
+        timestamps: {
+            createdAt: 'created_at',
+            updatedAt: 'updated_at',
+        },
     },
 );
 
