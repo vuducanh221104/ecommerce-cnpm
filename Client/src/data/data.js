@@ -432,10 +432,10 @@ const footerData = [
     id: "f_more_info",
     title: "More info",
     links: [
-      { text: "Terms and conditions", url: "/tac" },
-      { text: "Privacy Policy", url: "/privacy" },
-      { text: "Shipping Policy", url: "/shipping" },
-      { text: "Sitemap", url: "/sitemap" },
+      { text: "Vũ Đức Anh", url: "/tac" },
+      { text: "Nguyễn Hữu Tịnh", url: "/privacy" },
+      { text: "Hoàng Trọng Trà", url: "/shipping" },
+      { text: "Vũ Duy Tài", url: "/sitemap" },
     ],
   },
   {
