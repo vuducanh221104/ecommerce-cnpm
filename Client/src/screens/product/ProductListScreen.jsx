@@ -124,7 +124,7 @@ const ProductListScreen = () => {
           <DescriptionContent>
             <Title titleText={"Clothing for Everyone Online"} />
             <ContentStylings className="text-base content-stylings">
-              <h4>Reexplore Clothing Collection Online at Ecommerce.</h4>
+              <h4>Reexplore Clothing Collection Online at BEELZEBUB.</h4>
               <p>
                 Lorem ipsum dolor sit amet consectetur, adipisicing elit. Sed,
                 molestiae ex atque similique consequuntur ipsum sapiente

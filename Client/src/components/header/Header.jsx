@@ -538,7 +538,7 @@ const Header = () => {
                 />
               </div>
               <span className="site-brand-text text-outerspace">
-                Ecommerce.
+                BEELZEBUB.
               </span>
             </SiteBrandWrapper>
           </div>

@@ -347,7 +347,7 @@ const Sidebar = () => {
           <div className="brand-img-wrap flex items-center justify-center">
             <img className="site-brand-img" src={staticImages.logo} />
           </div>
-          <span className="site-brand-text text-outerspace">Ecommerce.</span>
+          <span className="site-brand-text text-outerspace">BEELZEBUB.</span>
         </SiteBrandWrapper>
         <form
           className="sidenav-search-form sidenav-search-container"

@@ -188,7 +188,7 @@ const Footer = () => {
               to="https://www.facebook.com/I.Am.DucAnh123"
               className="text-white"
             >
-              Ecommerce
+              BEELZEBUB.
             </Link>
             &nbsp;. All rights reserved.
           </p>
