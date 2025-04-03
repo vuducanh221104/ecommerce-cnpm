@@ -6,11 +6,11 @@ const adminMiddleware = require('../Middlewares/adminMiddleware');
 
 // Routes công khai
 router.patch('/admin/:id', userController.updateUserByAdmin); // Admin cập nhật user
+router.patch('/:id/password', userController.changePassword); // Đổi mật khẩu
 router.get('/admin', userController.getAllUsers); // Lấy danh sách tất cả users
 router.post('/admin', userController.createUserByAdmin);
-router.post('/register', userController.registerUser); // Đăng ký
 router.post('/login', userController.loginUser); // Đăng nhập
-router.patch('/:id/password', userController.changePassword); // Đổi mật khẩu
+router.post('/register', userController.registerUser); // Đăng ký
 router.get('/:id', userController.getUserInfo); // Lấy thông tin user
 router.patch('/:id', userController.updateUserInfo); // Cập nhật thông tin user
 

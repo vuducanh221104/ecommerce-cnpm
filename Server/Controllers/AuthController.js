@@ -27,6 +27,14 @@ class AuthController {
                 process.env.JWT_ACCESS_KEY || 'ducanh_jwt_secret_key',
                 { expiresIn: '1d' },
             );
+            const refreshToken = jwt.sign({ _id: user._id }, process.env.JWT_REFRESH_KEY, { expiresIn: '7d' });
+
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                path: '/',
+                sameSite: 'strict',
+            });
 
             // Remove sensitive data before sending back
             const { password, ...userData } = user._doc;
@@ -328,10 +336,8 @@ class AuthController {
     async removeAddress(req, res) {
         try {
             const { id } = req.params; // Address ID
-            const { user_id } = req.query;
-
             // Find the user
-            const user = await User.findById(user_id);
+            const user = await User.findById(id);
             if (!user) {
                 return res.status(404).json({ success: false, message: 'User not found' });
             }
@@ -363,6 +369,38 @@ class AuthController {
                 message: 'Internal server error',
                 error: error.message,
             });
+        }
+    }
+
+    // [POST] ~ REQUEST REFRESH TOKEN
+    async requestRefreshToken(req, res) {
+        const { refreshToken } = req.cookies;
+        if (!refreshToken) return res.status(403).json({ message: 'Refresh token is missing' });
+
+        try {
+            const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY);
+            const newAccessToken = jwt.sign(
+                { _id: decoded._id },
+                process.env.JWT_ACCESS_KEY,
+                { expiresIn: '30m' }, // Thời gian tồn tại của accessToken mới là 15 phút
+            );
+
+            const newRefreshToken = jwt.sign(
+                { _id: decoded._id },
+                process.env.JWT_REFRESH_KEY,
+                { expiresIn: '7d' }, // Thời gian tồn tại của refreshToken mới là 7 ngày
+            );
+
+            res.cookie('refreshToken', newRefreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                path: '/',
+                sameSite: 'strict',
+            });
+
+            return res.status(200).json({ accessToken: newAccessToken });
+        } catch (error) {
+            return res.status(403).json({ message: 'Invalid refresh token' });
         }
     }
 

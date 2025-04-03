@@ -112,16 +112,6 @@ class CartController {
             const { userId } = req.params;
             const { product_id, color, size, quantity } = req.body;
 
-            console.log('Updating cart item quantity:', {
-                userId,
-                product_id,
-                color,
-                size,
-                quantity,
-                product_id_type: typeof product_id,
-                product_id_value: product_id ? product_id.toString() : 'null',
-            });
-
             if (!product_id) {
                 return res.status(400).json({
                     success: false,

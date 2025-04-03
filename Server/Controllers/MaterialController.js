@@ -1,5 +1,34 @@
 const Material = require('../Models/Material');
 
+// Hàm tạo slug đơn giản
+function createSlug(str) {
+    // Chuyển thành chữ thường
+    str = str.toLowerCase();
+
+    // Thay thế các ký tự tiếng Việt
+    str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, 'a');
+    str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, 'e');
+    str = str.replace(/ì|í|ị|ỉ|ĩ/g, 'i');
+    str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, 'o');
+    str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, 'u');
+    str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, 'y');
+    str = str.replace(/đ/g, 'd');
+
+    // Xóa ký tự đặc biệt
+    str = str.replace(/[^a-z0-9 -]/g, '');
+
+    // Xóa khoảng trắng thay bằng -
+    str = str.replace(/\s+/g, '-');
+
+    // Xóa các dấu - liên tiếp
+    str = str.replace(/-+/g, '-');
+
+    // Xóa các dấu - ở đầu và cuối
+    str = str.replace(/^-+|-+$/g, '');
+
+    return str;
+}
+
 function createMaterialList(categories, parent_id = null) {
     const categoryList = [];
     let category;
@@ -40,7 +69,11 @@ class MaterialController {
 
             // Xử lý một material đơn lẻ
             if (!Array.isArray(materialData)) {
-                const newMaterial = new Material(materialData);
+                const newMaterialData = {
+                    name: materialData.name,
+                    slug: createSlug(materialData.name),
+                };
+                const newMaterial = new Material(newMaterialData);
                 const savedMaterial = await newMaterial.save();
                 return res.status(200).json({
                     success: true,
@@ -52,7 +85,11 @@ class MaterialController {
             // Xử lý nhiều materials
             const savedMaterials = [];
             for (const material of materialData) {
-                const newMaterial = new Material(material);
+                const newMaterialData = {
+                    name: material.name,
+                    slug: createSlug(material.name),
+                };
+                const newMaterial = new Material(newMaterialData);
                 const data = await newMaterial.save();
                 savedMaterials.push(data);
             }
@@ -72,18 +109,54 @@ class MaterialController {
 
     //[PATCH]
     async materialUpdate(req, res) {
-        const updatedMaterials = req.body;
-
         try {
-            const updatePromises = updatedMaterials.map((material) => {
-                return Material.findByIdAndUpdate(material._id, material, { new: true });
+            const { id, name } = req.body;
+
+            // Validate input
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'ID chất liệu là bắt buộc',
+                });
+            }
+
+            if (!name || name.trim() === '') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Tên chất liệu không được để trống',
+                });
+            }
+
+            // Tìm chất liệu theo ID
+            const material = await Material.findById(id);
+
+            if (!material) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy chất liệu',
+                });
+            }
+
+            // Cập nhật thông tin
+            material.name = name;
+            material.slug = createSlug(name);
+
+            // Lưu vào database
+            const updatedMaterial = await material.save();
+
+            // Trả về kết quả thành công
+            return res.status(200).json({
+                success: true,
+                message: 'Cập nhật chất liệu thành công',
+                material: updatedMaterial,
             });
-
-            const results = await Promise.all(updatePromises);
-
-            res.json({ message: 'Materials updated successfully', results });
         } catch (error) {
-            res.status(500).json({ message: 'Error updating materials', error });
+            console.error('Lỗi cập nhật chất liệu:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi khi cập nhật chất liệu',
+                error: error.message,
+            });
         }
     }
     //[DELETE]

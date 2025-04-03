@@ -1,5 +1,35 @@
 const Product = require('../Models/Product');
 const Category = require('../Models/Category');
+
+// Hàm tạo slug đơn giản
+function createSlug(str) {
+    // Chuyển thành chữ thường
+    str = str.toLowerCase();
+
+    // Thay thế các ký tự tiếng Việt
+    str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, 'a');
+    str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, 'e');
+    str = str.replace(/ì|í|ị|ỉ|ĩ/g, 'i');
+    str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, 'o');
+    str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, 'u');
+    str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, 'y');
+    str = str.replace(/đ/g, 'd');
+
+    // Xóa ký tự đặc biệt
+    str = str.replace(/[^a-z0-9 -]/g, '');
+
+    // Xóa khoảng trắng thay bằng -
+    str = str.replace(/\s+/g, '-');
+
+    // Xóa các dấu - liên tiếp
+    str = str.replace(/-+/g, '-');
+
+    // Xóa các dấu - ở đầu và cuối
+    str = str.replace(/^-+|-+$/g, '');
+
+    return str;
+}
+
 function createCategoryList(categories, parent_id = null) {
     const categoryList = [];
     let category;
@@ -175,7 +205,11 @@ class CategoryController {
 
             // Xử lý một category đơn lẻ
             if (!Array.isArray(categoryData)) {
-                const newCategory = new Category(categoryData);
+                const newCategoryData = {
+                    name: categoryData.name,
+                    slug: createSlug(categoryData.name),
+                };
+                const newCategory = new Category(newCategoryData);
                 const savedCategory = await newCategory.save();
                 return res.status(200).json({
                     success: true,
@@ -187,7 +221,11 @@ class CategoryController {
             // Xử lý nhiều categories
             const savedCategories = [];
             for (const category of categoryData) {
-                const newCategory = new Category(category);
+                const newCategoryData = {
+                    name: category.name,
+                    slug: createSlug(category.name),
+                };
+                const newCategory = new Category(newCategoryData);
                 const data = await newCategory.save();
                 savedCategories.push(data);
             }
@@ -206,19 +244,54 @@ class CategoryController {
     }
     //[PATCH]
     async categoryUpdate(req, res) {
-        const updatedCategory = req.body;
         try {
-            // Use Promise.all to handle multiple updates
-            const updatePromises = updatedCategory.map((category) => {
-                return Category.findByIdAndUpdate(category._id, category, { new: true });
+            const { id, name } = req.body;
+
+            // Validate input
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'ID danh mục là bắt buộc',
+                });
+            }
+
+            if (!name || name.trim() === '') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Tên danh mục không được để trống',
+                });
+            }
+
+            // Tìm danh mục theo ID
+            const category = await Category.findById(id);
+
+            if (!category) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy danh mục',
+                });
+            }
+
+            // Cập nhật thông tin
+            category.name = name;
+            category.slug = createSlug(name);
+
+            // Lưu vào database
+            const updatedCategory = await category.save();
+
+            // Trả về kết quả thành công
+            return res.status(200).json({
+                success: true,
+                message: 'Cập nhật danh mục thành công',
+                category: updatedCategory,
             });
-
-            // Wait for all updates to complete
-            const results = await Promise.all(updatePromises);
-
-            res.json({ message: 'Materials updated successfully', results });
         } catch (error) {
-            res.status(500).json({ message: 'Error updating materials', error });
+            console.error('Lỗi cập nhật danh mục:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi khi cập nhật danh mục',
+                error: error.message,
+            });
         }
     }
     //[DELETE]
@@ -226,7 +299,7 @@ class CategoryController {
         const { ids } = req.body;
         try {
             await Category.deleteMany({ _id: { $in: ids } });
-            res.status(200).json({ message: 'Materials deleted successfully' });
+            res.status(200).json({ message: 'Categories deleted successfully' });
         } catch (error) {
             res.status(500).json({ message: error.message });
         }
