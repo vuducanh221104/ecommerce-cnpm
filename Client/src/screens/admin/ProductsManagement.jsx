@@ -40,6 +40,7 @@ import {
 import * as productService from "../../services/productService";
 import * as categoryService from "../../services/categoryService";
 import * as materialService from "../../services/materialService";
+import { getColorHexValue, COLOR_MAP } from "../../utils/constants";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -1033,14 +1034,8 @@ const ProductsManagement = () => {
                               ]}
                             >
                               <Select
-                                showSearch
-                                placeholder="Chọn màu hoặc nhập tên màu"
-                                optionFilterProp="children"
-                                filterOption={(input, option) =>
-                                  option.children
-                                    .toLowerCase()
-                                    .indexOf(input.toLowerCase()) >= 0
-                                }
+                                style={{ width: "100%" }}
+                                placeholder="Chọn màu sắc"
                                 dropdownRender={(menu) => (
                                   <>
                                     {menu}
@@ -1057,22 +1052,31 @@ const ProductsManagement = () => {
                                   </>
                                 )}
                               >
-                                <Select.Option value="White">
-                                  White
-                                </Select.Option>
-                                <Select.Option value="Black">
-                                  Black
-                                </Select.Option>
-                                <Select.Option value="Gray">Gray</Select.Option>
-                                <Select.Option value="Blue">Blue</Select.Option>
-                                <Select.Option value="Cream">
-                                  Cream
-                                </Select.Option>
-                                <Select.Option value="Red">Red</Select.Option>
-                                <Select.Option value="Pink">Pink</Select.Option>
-                                <Select.Option value="Yellow">
-                                  Yellow
-                                </Select.Option>
+                                {Object.keys(COLOR_MAP).map((colorName) => (
+                                  <Select.Option
+                                    value={colorName}
+                                    key={colorName}
+                                  >
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: "16px",
+                                          height: "16px",
+                                          backgroundColor: COLOR_MAP[colorName],
+                                          marginRight: "8px",
+                                          border: "1px solid #d9d9d9",
+                                          borderRadius: "2px",
+                                        }}
+                                      />
+                                      {colorName}
+                                    </div>
+                                  </Select.Option>
+                                ))}
                               </Select>
                             </Form.Item>
                           </Col>

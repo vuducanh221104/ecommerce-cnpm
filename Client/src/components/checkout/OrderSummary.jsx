@@ -153,7 +153,7 @@ const OrderSummary = ({ products, totalAmount }) => {
 
   return (
     <SummaryContainer>
-      <Title>Tóm tắt đơn hàng</Title>
+      <Title>Order Summary</Title>
 
       <ProductList>
         {products.map((item, index) => (
@@ -179,23 +179,23 @@ const OrderSummary = ({ products, totalAmount }) => {
 
       <SummaryDetails>
         <SummaryRow>
-          <SummaryLabel>Tạm tính</SummaryLabel>
+          <SummaryLabel>Subtotal</SummaryLabel>
           <SummaryValue>${subtotal}</SummaryValue>
         </SummaryRow>
         <SummaryRow>
-          <SummaryLabel>Phí vận chuyển</SummaryLabel>
+          <SummaryLabel>Shipping Fee</SummaryLabel>
           <SummaryValue>
-            {shippingFee === 0 ? "Miễn phí" : $(shippingFee)}
+            {shippingFee === 0 ? "Free" : $(shippingFee)}
           </SummaryValue>
         </SummaryRow>
         <SummaryRow>
-          <SummaryLabel $total>Tổng cộng</SummaryLabel>
+          <SummaryLabel $total>Total</SummaryLabel>
           <SummaryValue $total>${totalAmount}</SummaryValue>
         </SummaryRow>
       </SummaryDetails>
 
       <PaymentMethod>
-        <PaymentTitle>Phương thức thanh toán</PaymentTitle>
+        <PaymentTitle>Payment Method</PaymentTitle>
         <PaymentOption>
           <Radio
             type="radio"
@@ -205,9 +205,7 @@ const OrderSummary = ({ products, totalAmount }) => {
             checked
             readOnly
           />
-          <PaymentLabel htmlFor="cod">
-            Thanh toán khi nhận hàng (COD)
-          </PaymentLabel>
+          <PaymentLabel htmlFor="cod">Cash on delivery (COD)</PaymentLabel>
         </PaymentOption>
       </PaymentMethod>
     </SummaryContainer>

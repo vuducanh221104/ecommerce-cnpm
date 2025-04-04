@@ -131,7 +131,7 @@ export const logoutUser = async () => {
       store.dispatch(updateUserSuccess(null));
 
       // Reload wishlist from localStorage after logout
-      const localWishlist = localStorage.getItem("achats_wishlist");
+      const localWishlist = localStorage.getItem("_wishlist");
       if (localWishlist) {
         store.dispatch(setWishlistItems(JSON.parse(localWishlist)));
       } else {

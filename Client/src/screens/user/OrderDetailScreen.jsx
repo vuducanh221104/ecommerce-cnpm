@@ -12,6 +12,7 @@ import { getOrderById, cancelOrder } from "../../services/orderService";
 import toast from "react-hot-toast";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { store } from "../../redux/store";
+import { getColorHexValue } from "../../utils/constants";
 
 const OrderDetailScreenWrapper = styled.main`
   .btn-and-title-wrapper {
@@ -502,7 +503,25 @@ const OrderDetailScreen = () => {
                       {item.color && (
                         <p className="text-gray">
                           <span className="font-medium">Color: </span>
-                          {item.color}
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "inline-block",
+                                width: "12px",
+                                height: "12px",
+                                backgroundColor: getColorHexValue(item.color),
+                                marginRight: "6px",
+                                border: "1px solid #d9d9d9",
+                                borderRadius: "2px",
+                              }}
+                            />
+                            {item.color}
+                          </span>
                         </p>
                       )}
                       {item.size && (

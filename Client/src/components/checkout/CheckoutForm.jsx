@@ -237,11 +237,11 @@ const CheckoutForm = ({ totalAmount, products }) => {
 
   return (
     <FormContainer>
-      <Title>Thông tin giao hàng</Title>
+      <Title>Infomation Order</Title>
       <Form onSubmit={handleSubmit}>
         <FormRow>
           <FormGroup>
-            <Label htmlFor="full_name">Họ và tên</Label>
+            <Label htmlFor="full_name">Full Name</Label>
             <Input
               type="text"
               id="full_name"
@@ -252,7 +252,7 @@ const CheckoutForm = ({ totalAmount, products }) => {
             />
           </FormGroup>
           <FormGroup>
-            <Label htmlFor="phone_number">Số điện thoại</Label>
+            <Label htmlFor="phone_number">Phone Number</Label>
             <Input
               type="text"
               id="phone_number"
@@ -265,7 +265,7 @@ const CheckoutForm = ({ totalAmount, products }) => {
         </FormRow>
 
         <FormGroup>
-          <Label htmlFor="street">Địa chỉ đường/phố</Label>
+          <Label htmlFor="street">Address</Label>
           <Input
             type="text"
             id="street"
@@ -278,7 +278,7 @@ const CheckoutForm = ({ totalAmount, products }) => {
 
         <FormRow>
           <FormGroup>
-            <Label htmlFor="ward">Phường/Xã</Label>
+            <Label htmlFor="ward">Ward</Label>
             <Input
               type="text"
               id="ward"
@@ -289,7 +289,7 @@ const CheckoutForm = ({ totalAmount, products }) => {
             />
           </FormGroup>
           <FormGroup>
-            <Label htmlFor="district">Quận/Huyện</Label>
+            <Label htmlFor="district">District</Label>
             <Input
               type="text"
               id="district"
@@ -303,7 +303,7 @@ const CheckoutForm = ({ totalAmount, products }) => {
 
         <FormRow>
           <FormGroup>
-            <Label htmlFor="city">Thành phố/Tỉnh</Label>
+            <Label htmlFor="city">City</Label>
             <Input
               type="text"
               id="city"
@@ -314,7 +314,7 @@ const CheckoutForm = ({ totalAmount, products }) => {
             />
           </FormGroup>
           <FormGroup>
-            <Label htmlFor="country">Quốc gia</Label>
+            <Label htmlFor="country">Country</Label>
             <Select
               id="country"
               name="country"
@@ -327,18 +327,18 @@ const CheckoutForm = ({ totalAmount, products }) => {
         </FormRow>
 
         <FormGroup>
-          <Label htmlFor="notes">Ghi chú</Label>
+          <Label htmlFor="notes">Notes</Label>
           <Textarea
             id="notes"
             name="notes"
             value={formData.notes}
             onChange={handleChange}
-            placeholder="Nhập ghi chú về đơn hàng (nếu có)"
+            placeholder="Enter notes about the order (if any)"
           />
         </FormGroup>
 
         <SubmitButton type="submit" disabled={loading}>
-          {loading ? "Đang xử lý..." : "Hoàn tất đặt hàng"}
+          {loading ? "Processing..." : "Complete Order"}
         </SubmitButton>
       </Form>
     </FormContainer>

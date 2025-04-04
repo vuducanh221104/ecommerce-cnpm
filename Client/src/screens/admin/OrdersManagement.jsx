@@ -42,6 +42,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 // Import services
 import * as orderService from "../../services/orderService";
+import { getColorHexValue } from "../../utils/constants";
 
 const { Title, Text } = Typography;
 const { confirm } = Modal;
@@ -1098,8 +1099,35 @@ const OrdersManagement = () => {
                       <Text strong>{item.name}</Text>
                       <div style={{ marginTop: 8 }}>
                         <Text type="secondary">
-                          {item.size && `Size: ${item.size}`}{" "}
-                          {item.color && `| Màu: ${item.color}`}
+                          {item.size && `Size: ${item.size}`}
+                          {item.color && (
+                            <span
+                              style={{ marginLeft: item.size ? "8px" : "0" }}
+                            >
+                              | Màu:{" "}
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    width: "12px",
+                                    height: "12px",
+                                    backgroundColor: getColorHexValue(
+                                      item.color
+                                    ),
+                                    marginRight: "6px",
+                                    border: "1px solid #d9d9d9",
+                                    borderRadius: "2px",
+                                  }}
+                                />
+                                {item.color}
+                              </span>
+                            </span>
+                          )}
                         </Text>
                       </div>
                       <div style={{ marginTop: 8 }}>

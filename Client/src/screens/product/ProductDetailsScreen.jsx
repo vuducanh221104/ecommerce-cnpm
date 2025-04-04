@@ -22,6 +22,7 @@ import {
 import { toast } from "react-hot-toast";
 import { useSelector, useDispatch } from "react-redux";
 import { updateCartSuccess } from "../../redux/slices/userSlice";
+import { getColorHexValue } from "../../utils/constants";
 
 const DetailsScreenWrapper = styled.main`
   margin: 40px 0;
@@ -519,7 +520,10 @@ const ProductDetailsScreen = () => {
                         />
                         <span
                           className="prod-colorbox"
-                          style={{ background: variant.color }}
+                          style={{
+                            background: getColorHexValue(variant.color),
+                          }}
+                          title={variant.color}
                         ></span>
                       </div>
                     ))}

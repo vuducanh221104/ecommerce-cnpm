@@ -38,6 +38,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
+import { getColorHexValue } from "../../utils/constants";
 
 // Import services
 import * as userService from "../../services/userService";
@@ -71,6 +72,9 @@ const CustomersManagement = () => {
   const [activeTab, setActiveTab] = useState("1");
   const [form] = Form.useForm();
   const [filterForm] = Form.useForm();
+  const [isOrderDetailModalVisible, setIsOrderDetailModalVisible] =
+    useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   // State quản lý danh sách khách hàng và phân trang
   const [customers, setCustomers] = useState([]);
@@ -592,11 +596,27 @@ const CustomersManagement = () => {
 
   // Xử lý chuyển đến trang chi tiết đơn hàng
   const goToOrderDetail = (orderId) => {
-    // Đóng modal chi tiết khách hàng
-    setIsDetailModalVisible(false);
+    // Find the order in customerOrders
+    const order = customerOrders.find((order) => order.id === orderId);
+    if (order) {
+      setSelectedOrder(order);
+      setIsDetailModalVisible(false); // Close customer details modal
+      setIsOrderDetailModalVisible(true);
+    } else {
+      message.error("Không tìm thấy thông tin đơn hàng");
+    }
+  };
 
-    // Chuyển đến trang quản lý đơn hàng với ID đơn hàng đã chọn
-    navigate(`/admin/orders?orderId=${orderId}`);
+  // Helper function to calculate product total price
+  const calculateProductTotal = (product) => {
+    const price =
+      typeof product.price === "object" && product.price.original
+        ? product.price.original
+        : typeof product.price === "number"
+        ? product.price
+        : 0;
+
+    return price * product.quantity;
   };
 
   return (
@@ -709,24 +729,6 @@ const CustomersManagement = () => {
           >
             Chỉnh sửa
           </Button>,
-          selectedCustomer?.status === "active" ? (
-            <Button
-              key="lock"
-              danger
-              onClick={() => showToggleStatusConfirm(selectedCustomer)}
-            >
-              Khóa tài khoản
-            </Button>
-          ) : (
-            <Button
-              key="unlock"
-              type="primary"
-              style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
-              onClick={() => showToggleStatusConfirm(selectedCustomer)}
-            >
-              Mở khóa
-            </Button>
-          ),
         ]}
         width={800}
       >
@@ -1027,6 +1029,139 @@ const CustomersManagement = () => {
             </Select>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal xem chi tiết đơn hàng */}
+      <Modal
+        title={`Chi tiết đơn hàng #${selectedOrder?.id?.substring(0, 10)}...`}
+        open={isOrderDetailModalVisible}
+        onCancel={() => setIsOrderDetailModalVisible(false)}
+        footer={[
+          <Button
+            key="back"
+            onClick={() => setIsOrderDetailModalVisible(false)}
+          >
+            Đóng
+          </Button>,
+        ]}
+        width={800}
+      >
+        {selectedOrder && (
+          <div>
+            <Card title="Thông tin đơn hàng" style={{ marginBottom: 16 }}>
+              <Descriptions
+                bordered
+                column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}
+              >
+                <Descriptions.Item label="Mã đơn hàng">
+                  <Text copyable>{selectedOrder.id}</Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Ngày đặt">
+                  {dayjs(selectedOrder.date).format("DD/MM/YYYY HH:mm")}
+                </Descriptions.Item>
+                <Descriptions.Item label="Trạng thái">
+                  <Tag
+                    color={
+                      orderStatusMap[selectedOrder.status]?.color || "default"
+                    }
+                  >
+                    {orderStatusMap[selectedOrder.status]?.text ||
+                      selectedOrder.status}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Tổng tiền">
+                  <Text strong>
+                    ${selectedOrder.total.toLocaleString("en-US")}
+                  </Text>
+                </Descriptions.Item>
+                {selectedOrder.customer_email && (
+                  <Descriptions.Item label="Email khách hàng" span={2}>
+                    <MailOutlined style={{ marginRight: 5 }} />
+                    {selectedOrder.customer_email}
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+            </Card>
+
+            <Card title="Sản phẩm" style={{ marginBottom: 16 }}>
+              {selectedOrder.products &&
+                selectedOrder.products.map((product, index) => (
+                  <Card.Grid
+                    key={index}
+                    style={{ width: "100%", padding: "12px" }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div>
+                        <Text strong>{product.name}</Text>
+                        <div>
+                          <Text type="secondary">
+                            {product.size && `Size: ${product.size}`}
+                            {product.color && (
+                              <span
+                                style={{
+                                  marginLeft: product.size ? "8px" : "0",
+                                }}
+                              >
+                                | Màu:{" "}
+                                <span
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      display: "inline-block",
+                                      width: "12px",
+                                      height: "12px",
+                                      backgroundColor: getColorHexValue(
+                                        product.color
+                                      ),
+                                      marginRight: "6px",
+                                      border: "1px solid #d9d9d9",
+                                      borderRadius: "2px",
+                                    }}
+                                  />
+                                  {product.color}
+                                </span>
+                              </span>
+                            )}
+                          </Text>
+                        </div>
+                        <div>
+                          <Text>SL: {product.quantity}</Text>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <Text>
+                          $
+                          {typeof product.price === "object" &&
+                          product.price.original
+                            ? product.price.original.toLocaleString("en-US")
+                            : typeof product.price === "number"
+                            ? product.price.toLocaleString("en-US")
+                            : "N/A"}
+                        </Text>
+                        <div style={{ marginTop: 8 }}>
+                          <Text strong style={{ color: "#ff4d4f" }}>
+                            $
+                            {calculateProductTotal(product).toLocaleString(
+                              "en-US"
+                            )}
+                          </Text>
+                        </div>
+                      </div>
+                    </div>
+                  </Card.Grid>
+                ))}
+            </Card>
+          </div>
+        )}
       </Modal>
     </div>
   );

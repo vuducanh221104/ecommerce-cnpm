@@ -141,7 +141,6 @@ const CommentForm = ({
   };
 
   const handleRatingChange = (value) => {
-    console.log("Rating changed to:", value);
     setRating(value);
   };
 
@@ -195,8 +194,6 @@ const CommentForm = ({
           content: content.trim(),
           rating,
         };
-
-        console.log("Submitting comment with rating:", rating);
 
         const result = await addProductComment(productId, commentData);
 

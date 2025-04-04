@@ -149,22 +149,22 @@ const CheckoutScreen = () => {
 
   return (
     <CheckoutContainer>
-      <CheckoutTitle>Thanh toán</CheckoutTitle>
+      <CheckoutTitle>Payment</CheckoutTitle>
 
       <StepIndicator>
         <Step>
           <StepNumber $active={true}>1</StepNumber>
-          <StepText $active={true}>Giỏ hàng</StepText>
+          <StepText $active={true}>Cart</StepText>
         </Step>
         <Divider />
         <Step>
           <StepNumber $active={true}>2</StepNumber>
-          <StepText $active={true}>Thanh toán</StepText>
+          <StepText $active={true}>Payment</StepText>
         </Step>
         <Divider />
         <Step>
           <StepNumber $active={false}>3</StepNumber>
-          <StepText $active={false}>Xác nhận</StepText>
+          <StepText $active={false}>Confirm</StepText>
         </Step>
       </StepIndicator>
 

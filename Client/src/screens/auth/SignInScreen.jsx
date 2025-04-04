@@ -66,7 +66,6 @@ const SignInScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [returnUrl, setReturnUrl] = useState("/");
 
-  // Extract returnUrl from query parameters
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const urlReturnPath = searchParams.get("returnUrl");
@@ -82,7 +81,6 @@ const SignInScreen = () => {
       [name]: value,
     });
 
-    // Clear error when typing
     if (errors[name]) {
       setErrors({
         ...errors,

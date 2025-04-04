@@ -138,7 +138,7 @@ const ProductListScreen = () => {
               </p>
               <h4>
                 One-stop Destination to Shop Every Clothing for Everyone:
-                Achats.
+                Beelzebub.
               </h4>
               <p>
                 Lorem ipsum dolor sit amet consectetur adipisicing elit. Nemo

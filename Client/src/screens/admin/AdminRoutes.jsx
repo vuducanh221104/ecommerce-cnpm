@@ -11,9 +11,6 @@ import AdminLoginScreen from "./AdminLoginScreen";
 import ProtectedAdminRoute from "../../components/auth/ProtectedAdminRoute";
 import { Result, Button } from "antd";
 
-/**
- * Trang "Đang xây dựng" khi chức năng chưa được triển khai
- */
 const UnderConstruction = ({ title }) => (
   <Result
     status="info"
@@ -27,18 +24,9 @@ const UnderConstruction = ({ title }) => (
   />
 );
 
-/**
- * AdminRoutes - Cấu hình route cho Admin Panel
- *
- * Quản lý các routes cho phần Admin, bao gồm:
- * - Dashboard (tổng quan)
- * - Quản lý sản phẩm
- * - Các trang chức năng khác (đang xây dựng)
- */
 const AdminRoutes = () => {
   return (
     <Routes>
-      {/* Admin Login Route - Không cần bảo vệ */}
       <Route path="/login" element={<AdminLoginScreen />} />
 
       {/* Protected Admin Routes - Cần xác thực và quyền admin */}
